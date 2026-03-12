@@ -34,6 +34,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/user/**").permitAll()
                 .requestMatchers("/api/categories/**").permitAll()
                 .requestMatchers("/api/bills/**").permitAll()
+                .requestMatchers("/api/project-configs/**").permitAll()
+                .requestMatchers("/api/daily-performances/**").permitAll()
                 .requestMatchers("/Usersimg/**").permitAll()
                 .requestMatchers("/default-avatar.svg").permitAll()
                 .requestMatchers("/test.html").permitAll()

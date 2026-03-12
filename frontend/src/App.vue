@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router';
 import Login from './components/Login.vue';
 import Register from './components/Register.vue';
 import UserProfileEdit from './components/UserProfileEdit.vue';
+import { ElConfigProvider } from 'element-plus';
+import zhCn from 'element-plus/dist/locale/zh-cn.mjs';
 
 const router = useRouter();
 
@@ -152,18 +154,19 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div v-if="!isLoggedIn" class="auth-container">
-    <Login 
-      v-if="currentView === 'login'" 
-      @switchToRegister="switchToRegister"
-      @loginSuccess="handleLoginSuccess"
-    />
-    <Register 
-      v-else 
-      @switchToLogin="switchToLogin"
-    />
-  </div>
-  <div v-else class="app-container" :class="{ 'sidebar-hidden': !sidebarVisible }">
+  <el-config-provider :locale="zhCn">
+    <div v-if="!isLoggedIn" class="auth-container">
+      <Login 
+        v-if="currentView === 'login'" 
+        @switchToRegister="switchToRegister"
+        @loginSuccess="handleLoginSuccess"
+      />
+      <Register 
+        v-else 
+        @switchToLogin="switchToLogin"
+      />
+    </div>
+    <div v-else class="app-container" :class="{ 'sidebar-hidden': !sidebarVisible }">
     <!-- 左侧导航栏 -->
     <aside class="sidebar">
       <header class="sidebar-header">
@@ -229,6 +232,7 @@ onUnmounted(() => {
       </div>
     </main>
   </div>
+  </el-config-provider>
 </template>
 
 <style scoped>
