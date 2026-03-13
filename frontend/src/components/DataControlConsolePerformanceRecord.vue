@@ -333,13 +333,112 @@
 
   <Teleport to="body">
     <div v-if="showOvertimeReport" class="modal-overlay" @click="showOvertimeReport = false">
-      <div class="modal placeholder-modal" @click.stop>
+      <div class="modal work-report-modal" @click.stop>
         <div class="modal-header">
           <h3>加班汇报</h3>
+          <div class="modal-header-actions">
+            <button class="btn btn-primary" @click="openAddOvertime">添加汇报</button>
+            <button class="btn btn-danger" @click="batchDeleteOvertimes" :disabled="selectedOvertimes.length === 0">批量删除</button>
+          </div>
         </div>
-        <div class="placeholder-content">
-          <p>功能开发中...</p>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th><input type="checkbox" v-model="selectAllOvertimes" @change="toggleSelectAllOvertimes"></th>
+                <th>记录日期</th>
+                <th>项目名称</th>
+                <th>加班时长(小时)</th>
+                <th>描述</th>
+                <th style="width: 140px;">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="overtime in overtimes" :key="overtime.id">
+                <td><input type="checkbox" v-model="selectedOvertimes" :value="overtime.id"></td>
+                <td>{{ overtime.recordDate }}</td>
+                <td>{{ getProjectName(overtime.projectId) }}</td>
+                <td>{{ overtime.overtimeHours }}</td>
+                <td>{{ overtime.description || '-' }}</td>
+                <td>
+                  <button class="btn btn-sm btn-secondary" @click="openEditOvertime(overtime)">编辑</button>
+                  <button class="btn btn-sm btn-danger" @click="deleteOvertime(overtime.id)">删除</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-if="overtimes.length === 0" class="no-data">暂无加班汇报记录</div>
         </div>
+        
+        <div class="pagination-container" v-if="totalOvertimes > 0">
+          <div class="pagination-info">共 {{ totalOvertimes }} 条记录</div>
+          <div class="pagination-controls">
+            <button class="page-btn" :class="{ disabled: overtimePage === 1 }" @click="overtimePage > 1 && goToOvertimePage(overtimePage - 1)">上一页</button>
+            <div class="page-numbers">
+              <button v-for="page in visibleOvertimePages" :key="page" class="page-number" :class="{ active: page === overtimePage }" @click="goToOvertimePage(page)">{{ page }}</button>
+            </div>
+            <button class="page-btn" :class="{ disabled: overtimePage >= totalOvertimePages }" @click="overtimePage < totalOvertimePages && goToOvertimePage(overtimePage + 1)">下一页</button>
+          </div>
+          <div class="page-size-selector">
+            <label>每页显示:</label>
+            <select v-model="overtimePageSize" @change="overtimePage = 1; applyOvertimeFilters()" class="page-size-select">
+              <option value="10">10条</option>
+              <option value="20">20条</option>
+              <option value="50">50条</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <Teleport to="body">
+    <div v-if="showAddOvertime || showEditOvertime" class="modal-overlay" @click="closeOvertimeModal">
+      <div class="modal modal-form" @click.stop>
+        <form @submit.prevent="saveOvertime">
+          <div class="modal-header">
+            <h3>{{ showEditOvertime ? '编辑加班汇报' : '添加加班汇报' }}</h3>
+            <div class="modal-header-actions">
+              <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>记录日期</label>
+              <el-date-picker
+                class="custom-date-picker"
+                v-model="overtimeForm.recordDate"
+                type="date"
+                placeholder="请选择日期"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                :locale="zhCn"
+                required
+              />
+            </div>
+            
+            <div class="form-group">
+              <label>项目</label>
+              <el-select v-model="overtimeForm.projectId" placeholder="请选择项目" required class="full-width">
+                <el-option v-for="project in projects" :key="project.id" :label="project.projectName" :value="project.id"></el-option>
+              </el-select>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>加班时长(小时)</label>
+              <input type="number" v-model.number="overtimeForm.overtimeHours" step="0.5" min="0" placeholder="请输入加班时长" required>
+            </div>
+            
+            <div class="form-group">
+              <label>描述</label>
+              <input type="text" v-model="overtimeForm.description" placeholder="请输入加班描述（可选）">
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   </Teleport>
@@ -374,18 +473,24 @@ const showAddPerformance = ref(false);
 const showEditPerformance = ref(false);
 const showAddProject = ref(false);
 const showEditProject = ref(false);
+const showAddOvertime = ref(false);
+const showEditOvertime = ref(false);
 
 const performances = ref([]);
 const projects = ref([]);
+const overtimes = ref([]);
 const selectedPerformances = ref([]);
 const selectedProjects = ref([]);
+const selectedOvertimes = ref([]);
 const selectAllPerformances = ref(false);
 const selectAllProjects = ref(false);
+const selectAllOvertimes = ref(false);
 
 const filterDateRange = ref(null);
 const filterProjectId = ref(null);
 const filterManDays = ref(null);
 const allPerformances = ref([]);
+const allOvertimes = ref([]);
 
 const projectNameSearch = ref('');
 const allProjects = ref([]);
@@ -394,18 +499,30 @@ const performancePage = ref(1);
 const performancePageSize = ref(10);
 const totalPerformances = ref(0);
 
+const overtimePage = ref(1);
+const overtimePageSize = ref(10);
+const totalOvertimes = ref(0);
+
 const projectPage = ref(1);
 const projectPageSize = ref(10);
 const totalProjects = ref(0);
 
 const performanceForm = ref({
-  id: null,
   recordDate: '',
-  projectId: '',
+  projectId: null,
   processType: '',
   quotaEfficiency: 0,
   actualWorkload: 0
 });
+const editingPerformanceId = ref(null);
+
+const overtimeForm = ref({
+  recordDate: '',
+  projectId: null,
+  overtimeHours: 0,
+  description: ''
+});
+const editingOvertimeId = ref(null);
 
 const projectForm = ref({
   id: null,
@@ -427,6 +544,16 @@ const visiblePerformancePages = computed(() => {
   return pages;
 });
 
+const totalOvertimePages = computed(() => Math.ceil(totalOvertimes.value / overtimePageSize.value) || 1);
+
+const visibleOvertimePages = computed(() => {
+  const pages = [];
+  const start = Math.max(1, overtimePage.value - 2);
+  const end = Math.min(totalOvertimePages.value, overtimePage.value + 2);
+  for (let i = start; i <= end; i++) pages.push(i);
+  return pages;
+});
+
 const visibleProjectPages = computed(() => {
   const pages = [];
   const start = Math.max(1, projectPage.value - 2);
@@ -442,12 +569,62 @@ const calculatedManDays = computed(() => {
   return '0.000';
 });
 
+const formatDateToLocal = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getChartDateRange = () => {
+  const today = new Date();
+  let startDate, endDate;
+  
+  if (chartTimeRange.value === 'week') {
+    const dayOfWeek = today.getDay();
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startDate = new Date(today);
+    startDate.setDate(today.getDate() - daysToMonday);
+    endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+  } else if (chartTimeRange.value === 'month') {
+    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 26);
+    endDate = new Date(today.getFullYear(), today.getMonth(), 25);
+  } else if (chartSelectedMonth.value) {
+    const [year, month] = chartSelectedMonth.value.split('-');
+    const monthNum = parseInt(month);
+    startDate = new Date(parseInt(year), monthNum - 2, 26);
+    endDate = new Date(parseInt(year), monthNum - 1, 25);
+  } else if (chartDateRange.value && chartDateRange.value.length === 2) {
+    startDate = new Date(chartDateRange.value[0]);
+    endDate = new Date(chartDateRange.value[1]);
+  } else {
+    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 26);
+    endDate = new Date(today.getFullYear(), today.getMonth(), 25);
+  }
+  
+  return {
+    startDateStr: formatDateToLocal(startDate),
+    endDateStr: formatDateToLocal(endDate)
+  };
+};
+
+const getFilteredPerformances = computed(() => {
+  const { startDateStr, endDateStr } = getChartDateRange();
+  return allPerformances.value.filter(p => {
+    return p.recordDate >= startDateStr && p.recordDate <= endDateStr;
+  });
+});
+
 const totalPerformanceDays = computed(() => {
-  return allPerformances.value.reduce((sum, p) => sum + (Number(p.performanceManDays) || 0), 0);
+  return getFilteredPerformances.value.reduce((sum, p) => {
+    const dailyPerformance = Number(p.performanceManDays) || 0;
+    return sum + (dailyPerformance - 1);
+  }, 0);
 });
 
 const attendanceDays = computed(() => {
-  const uniqueDates = new Set(allPerformances.value.map(p => p.recordDate));
+  const uniqueDates = new Set(getFilteredPerformances.value.map(p => p.recordDate));
   return uniqueDates.size;
 });
 
@@ -735,6 +912,162 @@ const toggleSelectAllPerformances = () => {
   }
 };
 
+// 加班汇报相关方法
+const fetchOvertimes = async () => {
+  const uid = getUid();
+  if (!uid) return;
+  
+  try {
+    const response = await fetch(`${API_BASE}/overtime-records?uid=${uid}&page=1&pageSize=10000`);
+    const data = await response.json();
+    allOvertimes.value = data.records || [];
+    applyOvertimeFilters();
+  } catch (error) {
+    console.error('获取加班汇报失败:', error);
+    ElMessage.error('获取加班汇报失败');
+  }
+};
+
+const applyOvertimeFilters = () => {
+  let filtered = [...allOvertimes.value];
+  
+  totalOvertimes.value = filtered.length;
+  
+  const start = (overtimePage.value - 1) * overtimePageSize.value;
+  const end = start + overtimePageSize.value;
+  overtimes.value = filtered.slice(start, end);
+};
+
+const goToOvertimePage = (page) => {
+  overtimePage.value = page;
+  applyOvertimeFilters();
+};
+
+const openAddOvertime = () => {
+  overtimeForm.value = {
+    recordDate: '',
+    projectId: null,
+    overtimeHours: 0,
+    description: ''
+  };
+  showAddOvertime.value = true;
+  showOvertimeReport.value = false;
+};
+
+const openEditOvertime = (overtime) => {
+  overtimeForm.value = {
+    recordDate: overtime.recordDate,
+    projectId: overtime.projectId,
+    overtimeHours: overtime.overtimeHours,
+    description: overtime.description || ''
+  };
+  editingOvertimeId.value = overtime.id;
+  showEditOvertime.value = true;
+  showOvertimeReport.value = false;
+};
+
+const closeOvertimeModal = () => {
+  showAddOvertime.value = false;
+  showEditOvertime.value = false;
+  showOvertimeReport.value = true;
+};
+
+const saveOvertime = async () => {
+  const uid = getUid();
+  if (!uid) {
+    ElMessage.error('请先登录');
+    return;
+  }
+  
+  try {
+    const url = showEditOvertime.value 
+      ? `${API_BASE}/overtime-records/${editingOvertimeId.value}`
+      : `${API_BASE}/overtime-records`;
+    
+    const method = showEditOvertime.value ? 'PUT' : 'POST';
+    
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uid,
+        recordDate: overtimeForm.value.recordDate,
+        projectId: overtimeForm.value.projectId,
+        overtimeHours: overtimeForm.value.overtimeHours,
+        description: overtimeForm.value.description
+      })
+    });
+    
+    const data = await response.json();
+    if (response.ok) {
+      ElMessage.success(showEditOvertime.value ? '更新成功' : '添加成功');
+      closeOvertimeModal();
+      fetchOvertimes();
+    } else {
+      ElMessage.error(data.message || '保存失败');
+    }
+  } catch (error) {
+    console.error('保存加班记录失败:', error);
+    ElMessage.error('保存失败');
+  }
+};
+
+const deleteOvertime = async (id) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这条记录吗？', '删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+    
+    const response = await fetch(`${API_BASE}/overtime-records/${id}`, { method: 'DELETE' });
+    if (response.ok) {
+      ElMessage.success('删除成功');
+      fetchOvertimes();
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败');
+    }
+  }
+};
+
+const batchDeleteOvertimes = async () => {
+  if (selectedOvertimes.value.length === 0) return;
+  
+  try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedOvertimes.value.length} 条记录吗？`, '批量删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+    
+    const response = await fetch(`${API_BASE}/overtime-records/batch`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: selectedOvertimes.value })
+    });
+    if (response.ok) {
+      ElMessage.success('批量删除成功');
+      selectedOvertimes.value = [];
+      selectAllOvertimes.value = false;
+      fetchOvertimes();
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('批量删除失败');
+    }
+  }
+};
+
+const toggleSelectAllOvertimes = () => {
+  if (selectAllOvertimes.value) {
+    selectedOvertimes.value = overtimes.value.map(o => o.id);
+  } else {
+    selectedOvertimes.value = [];
+  }
+};
+
 const openAddProject = () => {
   projectForm.value = {
     id: null,
@@ -867,6 +1200,10 @@ watch(showProjectConfig, (val) => {
   if (val) fetchProjects();
 });
 
+watch(showOvertimeReport, (val) => {
+  if (val) fetchOvertimes();
+});
+
 // 图表相关方法
 const initChart = () => {
   if (chartRef.value) {
@@ -876,13 +1213,6 @@ const initChart = () => {
     chartInstance = markRaw(echarts.init(chartRef.value));
     updateChart();
   }
-};
-
-const formatDateToLocal = (date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 };
 
 const updateChart = () => {

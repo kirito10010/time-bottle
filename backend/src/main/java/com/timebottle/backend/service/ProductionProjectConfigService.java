@@ -3,6 +3,7 @@ package com.timebottle.backend.service;
 import com.timebottle.backend.entity.ProductionProjectConfig;
 import com.timebottle.backend.repository.ProductionProjectConfigRepository;
 import com.timebottle.backend.repository.DailyPerformanceRepository;
+import com.timebottle.backend.repository.OvertimeRecordRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,9 @@ public class ProductionProjectConfigService {
 
     @Autowired
     private DailyPerformanceRepository dailyPerformanceRepository;
+
+    @Autowired
+    private OvertimeRecordRepository overtimeRecordRepository;
 
     public List<ProductionProjectConfig> findByUid(String uid) {
         return projectConfigRepository.findByUidOrderByCreatedAtDesc(uid);
@@ -61,6 +65,10 @@ public class ProductionProjectConfigService {
             throw new RuntimeException("该项目已被工作汇报使用，无法删除");
         }
         
+        if (overtimeRecordRepository.existsByProjectId(id)) {
+            throw new RuntimeException("该项目已被加班汇报使用，无法删除");
+        }
+        
         projectConfigRepository.delete(config);
     }
 
@@ -68,16 +76,31 @@ public class ProductionProjectConfigService {
         List<String> usedProjects = new ArrayList<>();
         
         for (Long id : ids) {
-            if (id != null && dailyPerformanceRepository.existsByProjectId(id)) {
+            if (id != null) {
+                boolean isUsed = false;
+                String projectName = null;
+                
                 ProductionProjectConfig config = projectConfigRepository.findById(id).orElse(null);
                 if (config != null) {
-                    usedProjects.add(config.getProjectName());
+                    projectName = config.getProjectName();
+                }
+                
+                if (dailyPerformanceRepository.existsByProjectId(id)) {
+                    isUsed = true;
+                }
+                
+                if (overtimeRecordRepository.existsByProjectId(id)) {
+                    isUsed = true;
+                }
+                
+                if (isUsed && projectName != null) {
+                    usedProjects.add(projectName);
                 }
             }
         }
         
         if (!usedProjects.isEmpty()) {
-            throw new RuntimeException("以下项目已被工作汇报使用，无法删除：" + String.join("、", usedProjects));
+            throw new RuntimeException("以下项目已被使用，无法删除：" + String.join("、", usedProjects));
         }
         
         projectConfigRepository.deleteAllById(ids);

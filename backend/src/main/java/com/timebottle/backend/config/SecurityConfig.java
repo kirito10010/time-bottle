@@ -36,6 +36,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/bills/**").permitAll()
                 .requestMatchers("/api/project-configs/**").permitAll()
                 .requestMatchers("/api/daily-performances/**").permitAll()
+                .requestMatchers("/api/overtime-records/**").permitAll()
                 .requestMatchers("/Usersimg/**").permitAll()
                 .requestMatchers("/default-avatar.svg").permitAll()
                 .requestMatchers("/test.html").permitAll()
