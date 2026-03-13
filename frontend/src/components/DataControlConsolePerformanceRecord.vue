@@ -10,8 +10,58 @@
       </div>
     </div>
     
-    <div class="placeholder">
-      <p>请点击上方按钮进行操作</p>
+    <!-- 统计卡片区域 -->
+    <div class="stats-section">
+      <div class="stat-card performance-card">
+        <div class="stat-title">绩效总和</div>
+        <div class="stat-value performance-value">{{ totalPerformanceDays.toFixed(3) }} 天</div>
+      </div>
+      <div class="stat-card attendance-card">
+        <div class="stat-title">考勤天数</div>
+        <div class="stat-value attendance-value">{{ attendanceDays }} 天</div>
+      </div>
+      <div class="stat-card average-card">
+        <div class="stat-title">日均绩效</div>
+        <div class="stat-value average-value">{{ dailyAveragePerformance.toFixed(3) }} 天</div>
+      </div>
+    </div>
+
+    <!-- 图表区域 -->
+    <div class="chart-section">
+      <div class="chart-header">
+        <h3>绩效趋势</h3>
+        <div class="time-range-selector">
+          <div class="time-buttons">
+            <button class="time-btn" :class="{ active: chartTimeRange === 'week' }" @click="setChartTimeRange('week')">本周</button>
+            <button class="time-btn" :class="{ active: chartTimeRange === 'month' }" @click="setChartTimeRange('month')">本月</button>
+            <el-date-picker
+              v-model="chartSelectedMonth"
+              type="month"
+              placeholder="选择月份"
+              format="YYYY年MM月"
+              value-format="YYYY-MM"
+              class="chart-month-picker"
+              :locale="zhCn"
+              @change="handleMonthChange"
+            />
+          </div>
+          <div class="time-selectors">
+            <el-date-picker
+              v-model="chartDateRange"
+              type="daterange"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              format="YYYY-MM-DD"
+              value-format="YYYY-MM-DD"
+              class="chart-date-picker"
+              :locale="zhCn"
+              @change="handleChartDateChange"
+            />
+          </div>
+        </div>
+      </div>
+      <div id="performanceChart" ref="chartRef" class="chart-container"></div>
     </div>
   </div>
 
@@ -188,6 +238,17 @@
             <button class="btn btn-danger" @click="batchDeleteProjects" :disabled="selectedProjects.length === 0">批量删除</button>
           </div>
         </div>
+
+        <div class="filter-section">
+          <div class="filter-item">
+            <label>项目名称</label>
+            <el-input v-model="projectNameSearch" placeholder="请输入项目名称搜索" clearable class="filter-input" @input="handleProjectSearch">
+              <template #prefix>
+                <span class="search-icon">🔍</span>
+              </template>
+            </el-input>
+          </div>
+        </div>
         
         <div class="table-container">
           <table class="data-table">
@@ -221,15 +282,15 @@
         <div class="pagination-container" v-if="totalProjects > 0">
           <div class="pagination-info">共 {{ totalProjects }} 条记录</div>
           <div class="pagination-controls">
-            <button class="page-btn" :class="{ disabled: projectPage === 1 }" @click="projectPage > 1 && (projectPage--, fetchProjects())">上一页</button>
+            <button class="page-btn" :class="{ disabled: projectPage === 1 }" @click="projectPage > 1 && goToProjectPage(projectPage - 1)">上一页</button>
             <div class="page-numbers">
-              <button v-for="page in visibleProjectPages" :key="page" class="page-number" :class="{ active: page === projectPage }" @click="projectPage = page; fetchProjects()">{{ page }}</button>
+              <button v-for="page in visibleProjectPages" :key="page" class="page-number" :class="{ active: page === projectPage }" @click="goToProjectPage(page)">{{ page }}</button>
             </div>
-            <button class="page-btn" :class="{ disabled: projectPage >= totalProjectPages }" @click="projectPage < totalProjectPages && (projectPage++, fetchProjects())">下一页</button>
+            <button class="page-btn" :class="{ disabled: projectPage >= totalProjectPages }" @click="projectPage < totalProjectPages && goToProjectPage(projectPage + 1)">下一页</button>
           </div>
           <div class="page-size-selector">
             <label>每页显示:</label>
-            <select v-model="projectPageSize" @change="projectPage = 1; fetchProjects()" class="page-size-select">
+            <select v-model="projectPageSize" @change="projectPage = 1; applyProjectFilters()" class="page-size-select">
               <option value="10">10条</option>
               <option value="20">20条</option>
               <option value="50">50条</option>
@@ -298,9 +359,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { ElMessage, ElDatePicker, ElSelect, ElOption } from 'element-plus';
+import { ref, computed, onMounted, watch, onUnmounted, markRaw } from 'vue';
+import { ElMessage, ElDatePicker, ElSelect, ElOption, ElMessageBox, ElInput } from 'element-plus';
 import zhCn from 'element-plus/es/locale/lang/zh-cn';
+import * as echarts from 'echarts';
 
 const API_BASE = 'http://localhost:8080/api';
 
@@ -324,6 +386,9 @@ const filterDateRange = ref(null);
 const filterProjectId = ref(null);
 const filterManDays = ref(null);
 const allPerformances = ref([]);
+
+const projectNameSearch = ref('');
+const allProjects = ref([]);
 
 const performancePage = ref(1);
 const performancePageSize = ref(10);
@@ -377,6 +442,26 @@ const calculatedManDays = computed(() => {
   return '0.000';
 });
 
+const totalPerformanceDays = computed(() => {
+  return allPerformances.value.reduce((sum, p) => sum + (Number(p.performanceManDays) || 0), 0);
+});
+
+const attendanceDays = computed(() => {
+  const uniqueDates = new Set(allPerformances.value.map(p => p.recordDate));
+  return uniqueDates.size;
+});
+
+const dailyAveragePerformance = computed(() => {
+  if (attendanceDays.value === 0) return 0;
+  return totalPerformanceDays.value / attendanceDays.value;
+});
+
+const chartTimeRange = ref('month');
+const chartDateRange = ref(null);
+const chartSelectedMonth = ref(null);
+const chartRef = ref(null);
+let chartInstance = null;
+
 const getUid = () => {
   const savedUser = localStorage.getItem('user');
   if (savedUser) {
@@ -402,14 +487,41 @@ const fetchProjects = async () => {
   if (!uid) return;
   
   try {
-    const response = await fetch(`${API_BASE}/project-configs?uid=${uid}&page=${projectPage.value}&pageSize=${projectPageSize.value}`);
+    const response = await fetch(`${API_BASE}/project-configs?uid=${uid}&page=1&pageSize=10000`);
     const data = await response.json();
-    projects.value = data.configs || [];
-    totalProjects.value = data.total || 0;
+    allProjects.value = data.configs || [];
+    applyProjectFilters();
   } catch (error) {
     console.error('获取项目配置失败:', error);
     ElMessage.error('获取项目配置失败');
   }
+};
+
+const applyProjectFilters = () => {
+  let filtered = [...allProjects.value];
+  
+  if (projectNameSearch.value) {
+    const searchTerm = projectNameSearch.value.toLowerCase();
+    filtered = filtered.filter(p => 
+      p.projectName.toLowerCase().includes(searchTerm)
+    );
+  }
+  
+  totalProjects.value = filtered.length;
+  
+  const start = (projectPage.value - 1) * projectPageSize.value;
+  const end = start + projectPageSize.value;
+  projects.value = filtered.slice(start, end);
+};
+
+const handleProjectSearch = () => {
+  projectPage.value = 1;
+  applyProjectFilters();
+};
+
+const goToProjectPage = (page) => {
+  projectPage.value = page;
+  applyProjectFilters();
 };
 
 const fetchPerformances = async () => {
@@ -568,24 +680,35 @@ const savePerformance = async () => {
 };
 
 const deletePerformance = async (id) => {
-  if (!confirm('确定要删除这条记录吗？')) return;
-  
   try {
+    await ElMessageBox.confirm('确定要删除这条记录吗？', '删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+    
     const response = await fetch(`${API_BASE}/daily-performances/${id}`, { method: 'DELETE' });
     if (response.ok) {
       ElMessage.success('删除成功');
       fetchPerformances();
     }
   } catch (error) {
-    ElMessage.error('删除失败');
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败');
+    }
   }
 };
 
 const batchDeletePerformances = async () => {
   if (selectedPerformances.value.length === 0) return;
-  if (!confirm(`确定要删除选中的 ${selectedPerformances.value.length} 条记录吗？`)) return;
   
   try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedPerformances.value.length} 条记录吗？`, '批量删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+    
     const response = await fetch(`${API_BASE}/daily-performances/batch`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -598,7 +721,9 @@ const batchDeletePerformances = async () => {
       fetchPerformances();
     }
   } catch (error) {
-    ElMessage.error('批量删除失败');
+    if (error !== 'cancel') {
+      ElMessage.error('批量删除失败');
+    }
   }
 };
 
@@ -676,9 +801,13 @@ const saveProject = async () => {
 };
 
 const deleteProject = async (id) => {
-  if (!confirm('确定要删除这个项目吗？')) return;
-  
   try {
+    await ElMessageBox.confirm('确定要删除这个项目吗？', '删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+    
     const response = await fetch(`${API_BASE}/project-configs/${id}`, { method: 'DELETE' });
     const data = await response.json();
     if (response.ok) {
@@ -688,15 +817,22 @@ const deleteProject = async (id) => {
       ElMessage.error(data.message || '删除失败');
     }
   } catch (error) {
-    ElMessage.error('删除失败');
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败');
+    }
   }
 };
 
 const batchDeleteProjects = async () => {
   if (selectedProjects.value.length === 0) return;
-  if (!confirm(`确定要删除选中的 ${selectedProjects.value.length} 个项目吗？`)) return;
   
   try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedProjects.value.length} 个项目吗？`, '批量删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+    
     const response = await fetch(`${API_BASE}/project-configs/batch`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -709,7 +845,9 @@ const batchDeleteProjects = async () => {
       fetchProjects();
     }
   } catch (error) {
-    ElMessage.error('批量删除失败');
+    if (error !== 'cancel') {
+      ElMessage.error('批量删除失败');
+    }
   }
 };
 
@@ -729,8 +867,219 @@ watch(showProjectConfig, (val) => {
   if (val) fetchProjects();
 });
 
+// 图表相关方法
+const initChart = () => {
+  if (chartRef.value) {
+    if (chartInstance) {
+      chartInstance.dispose();
+    }
+    chartInstance = markRaw(echarts.init(chartRef.value));
+    updateChart();
+  }
+};
+
+const formatDateToLocal = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const updateChart = () => {
+  if (!chartInstance) return;
+  
+  const today = new Date();
+  let startDate, endDate;
+  
+  if (chartTimeRange.value === 'week') {
+    const dayOfWeek = today.getDay();
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startDate = new Date(today);
+    startDate.setDate(today.getDate() - daysToMonday);
+    endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+  } else if (chartTimeRange.value === 'month') {
+    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 26);
+    endDate = new Date(today.getFullYear(), today.getMonth(), 25);
+  } else if (chartSelectedMonth.value) {
+    const [year, month] = chartSelectedMonth.value.split('-');
+    const monthNum = parseInt(month);
+    startDate = new Date(parseInt(year), monthNum - 2, 26);
+    endDate = new Date(parseInt(year), monthNum - 1, 25);
+  } else if (chartDateRange.value && chartDateRange.value.length === 2) {
+    startDate = new Date(chartDateRange.value[0]);
+    endDate = new Date(chartDateRange.value[1]);
+  } else {
+    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 26);
+    endDate = new Date(today.getFullYear(), today.getMonth(), 25);
+  }
+  
+  const startDateStr = formatDateToLocal(startDate);
+  const endDateStr = formatDateToLocal(endDate);
+  
+  const filteredData = allPerformances.value.filter(p => {
+    return p.recordDate >= startDateStr && p.recordDate <= endDateStr;
+  });
+  
+  const dateMap = new Map();
+  const currentDate = new Date(startDate);
+  while (currentDate <= endDate) {
+    const dateStr = formatDateToLocal(currentDate);
+    dateMap.set(dateStr, 0);
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  filteredData.forEach(p => {
+    const currentValue = dateMap.get(p.recordDate) || 0;
+    dateMap.set(p.recordDate, currentValue + (Number(p.performanceManDays) || 0));
+  });
+  
+  const dates = Array.from(dateMap.keys());
+  const values = Array.from(dateMap.values());
+  
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(255, 255, 255, 0.98)',
+      borderColor: 'rgba(37, 99, 235, 0.15)',
+      borderWidth: 1,
+      padding: [14, 18],
+      borderRadius: 12,
+      textStyle: {
+        color: '#2d3748',
+        fontSize: 13
+      },
+      formatter: function(params) {
+        if (!params || params.length === 0) return '';
+        const date = params[0].axisValue;
+        const value = params[0].value || 0;
+        return `<div style="font-size:14px;font-weight:600;color:#1e40af;margin-bottom:8px;">${date}</div><div style="display:flex;justify-content:space-between;align-items:center;"><span style="color:#64748b;">绩效人天</span><span style="color:#4299e1;font-weight:600;font-size:14px;">${value.toFixed(3)} 天</span></div>`;
+      }
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      top: '10%',
+      containLabel: true
+    },
+    xAxis: [{
+      type: 'category',
+      boundaryGap: false,
+      data: dates,
+      axisLine: {
+        lineStyle: {
+          color: '#e2e8f0'
+        }
+      },
+      axisLabel: {
+        color: '#718096',
+        fontSize: 11
+      }
+    }],
+    yAxis: [{
+      type: 'value',
+      axisLine: {
+        show: false
+      },
+      axisTick: {
+        show: false
+      },
+      axisLabel: {
+        color: '#718096',
+        fontSize: 11
+      },
+      splitLine: {
+        lineStyle: {
+          color: '#e2e8f0',
+          type: 'dashed'
+        }
+      }
+    }],
+    series: [{
+      name: '绩效人天',
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      lineStyle: {
+        width: 3,
+        color: '#4299e1'
+      },
+      itemStyle: {
+        color: '#4299e1'
+      },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [{
+            offset: 0,
+            color: 'rgba(66, 153, 225, 0.3)'
+          }, {
+            offset: 1,
+            color: 'rgba(66, 153, 225, 0.05)'
+          }]
+        }
+      },
+      data: values
+    }]
+  };
+  
+  chartInstance.setOption(option);
+};
+
+const setChartTimeRange = (range) => {
+  chartTimeRange.value = range;
+  if (range === 'week' || range === 'month') {
+    chartDateRange.value = null;
+    chartSelectedMonth.value = null;
+  }
+  updateChart();
+};
+
+const handleMonthChange = () => {
+  if (chartSelectedMonth.value) {
+    chartTimeRange.value = 'custom';
+    chartDateRange.value = null;
+    updateChart();
+  }
+};
+
+const handleChartDateChange = () => {
+  if (chartDateRange.value && chartDateRange.value.length === 2) {
+    chartTimeRange.value = 'custom';
+    chartSelectedMonth.value = null;
+  }
+  updateChart();
+};
+
+const handleResize = () => {
+  if (chartInstance) {
+    chartInstance.resize();
+  }
+};
+
 onMounted(() => {
   fetchProjects();
+  fetchPerformances();
+  
+  window.addEventListener('resize', handleResize);
+  
+  setTimeout(() => {
+    initChart();
+  }, 100);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
+  if (chartInstance) {
+    chartInstance.dispose();
+    chartInstance = null;
+  }
 });
 </script>
 
@@ -767,6 +1116,144 @@ onMounted(() => {
 .action-buttons {
   display: flex;
   gap: 12px;
+}
+
+.stats-section {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  flex: 1;
+  background: linear-gradient(135deg, #ffffff 0%, #f7fafc 100%);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(224, 230, 237, 0.5);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.stat-title {
+  font-size: 14px;
+  color: #718096;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.performance-card {
+  border-left: 4px solid #4299e1;
+}
+
+.performance-value {
+  color: #4299e1;
+}
+
+.attendance-card {
+  border-left: 4px solid #48bb78;
+}
+
+.attendance-value {
+  color: #48bb78;
+}
+
+.average-card {
+  border-left: 4px solid #ed8936;
+}
+
+.average-value {
+  color: #ed8936;
+}
+
+.chart-section {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(224, 230, 237, 0.5);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.chart-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.time-range-selector {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.time-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.time-btn {
+  padding: 6px 16px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #4a5568;
+  cursor: pointer;
+  transition: all 0.2s;
+  height: 34px;
+}
+
+.time-btn:hover {
+  background: #f7fafc;
+}
+
+.time-btn.active {
+  background: #4299e1;
+  border-color: #4299e1;
+  color: #ffffff;
+}
+
+.time-selectors {
+  display: flex;
+  gap: 12px;
+}
+
+:deep(.chart-date-picker) {
+  width: 280px;
+}
+
+:deep(.chart-date-picker) {
+  height: 34px;
+}
+
+:deep(.chart-month-picker) {
+  width: 150px;
+}
+
+:deep(.chart-month-picker > .el-input__wrapper) {
+  height: 34px;
+}
+
+.chart-container {
+  width: 100%;
+  height: 350px;
 }
 
 .btn {
@@ -929,17 +1416,26 @@ onMounted(() => {
   color: #4a5568;
 }
 
-.filter-date-picker {
-  width: 260px;
+:deep(.filter-date-picker) {
+  height: 34px;
 }
 
-.filter-select {
+:deep(.filter-select > .el-select__wrapper) {
+  height: 34px;
   width: 160px;
 }
 
+:deep(.filter-input > .el-input__wrapper) {
+  height: 34px;
+}
+
 .btn-reset {
-  height: 40px;
-  padding: 0 16px;
+  width: 80px;
+  height: 34px;
+}
+
+.search-icon {
+  margin-right: 4px;
 }
 
 .table-container {
@@ -979,7 +1475,7 @@ onMounted(() => {
 
 .no-data {
   text-align: center;
-  padding: 40px;
+  padding: 34px;
   color: #a0aec0;
 }
 
@@ -1031,7 +1527,7 @@ onMounted(() => {
 
 .page-number {
   width: 32px;
-  height: 32px;
+  height: 34px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   border-radius: 6px;
@@ -1073,6 +1569,7 @@ onMounted(() => {
 .form-row {
   display: flex;
   gap: 16px;
+  margin: 0 2%;
 }
 
 .form-row .form-group {
@@ -1094,18 +1591,18 @@ onMounted(() => {
   border-radius: 8px;
   font-size: 14px;
   transition: all 0.2s;
-  line-height: 38px;
-  height: 40px;
+  line-height: 34px;
+  height: 34px;
   box-sizing: border-box;
 }
 
 :deep(.custom-date-picker) {
   width: 100%;
-  height: 40px;
+  height: 34px;
 }
 
 :deep(.full-width .el-select__wrapper) {
-  height: 40px;
+  height: 34px;
   min-height: auto; 
 }
 
@@ -1120,7 +1617,7 @@ onMounted(() => {
   background: #f7fafc !important;
   color: #718096 !important;
   cursor: not-allowed;
-  height: 40px !important;
+  height: 34px !important;
   line-height: 38px !important;
 }
 
@@ -1129,5 +1626,9 @@ onMounted(() => {
   text-align: center;
   color: #a0aec0;
   font-size: 16px;
+}
+
+.data-table th > input,.data-table td > input {
+  margin-left: 20%;
 }
 </style>
