@@ -255,7 +255,14 @@ const sendResetCode = async () => {
       body: JSON.stringify({ email: forgotEmail.value })
     });
 
-    const data = await response.json();
+    let data;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      throw new Error(text || '服务器响应异常');
+    }
 
     if (response.ok && data.success) {
       ElMessage.success('验证码已发送到您的邮箱');

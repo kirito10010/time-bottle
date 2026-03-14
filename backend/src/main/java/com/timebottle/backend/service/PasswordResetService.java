@@ -32,13 +32,14 @@ public class PasswordResetService {
     private static final int CODE_LENGTH = 6;
     private static final int EXPIRATION_MINUTES = 5;
 
+    @Transactional
     public boolean sendResetCode(String email) {
         User user = userRepository.findByEmail(email);
         if (user == null) {
             return false;
         }
 
-        tokenRepository.deleteByEmail(email);
+        tokenRepository.deleteAllByEmail(email);
 
         String code = generateCode();
         
