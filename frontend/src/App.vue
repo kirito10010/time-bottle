@@ -181,11 +181,13 @@ onUnmounted(() => {
               <span>数据总控台</span>
               <span class="expand-icon">{{ expandedMenus.dataControl ? '▼' : '▶' }}</span>
             </div>
-            <ul v-if="expandedMenus.dataControl" class="sub-menu">
-              <li><router-link to="/financial-ledger"><span class="menu-icon">💰</span>财务台账</router-link></li>
-              <li><router-link to="/performance-record"><span class="menu-icon">📈</span>绩效记录</router-link></li>
-              <li><router-link to="/performance-dashboard"><span class="menu-icon">📋</span>绩效看板</router-link></li>
-            </ul>
+            <Transition name="sub-menu">
+              <ul v-if="expandedMenus.dataControl" class="sub-menu">
+                <li><router-link to="/financial-ledger"><span class="menu-icon">💰</span>财务台账</router-link></li>
+                <li><router-link to="/performance-record"><span class="menu-icon">📈</span>绩效记录</router-link></li>
+                <li><router-link to="/performance-dashboard"><span class="menu-icon">📋</span>绩效看板</router-link></li>
+              </ul>
+            </Transition>
           </li>
         </ul>
       </nav>
@@ -504,7 +506,26 @@ body {
   list-style: none;
   padding: 8px 0;
   margin: 0;
-  transition: all 0.3s ease;
+}
+
+.sub-menu-enter-active,
+.sub-menu-leave-active {
+  transition: all 0.25s ease;
+  overflow: hidden;
+}
+
+.sub-menu-enter-from,
+.sub-menu-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.sub-menu-enter-to,
+.sub-menu-leave-from {
+  opacity: 1;
+  max-height: 200px;
 }
 
 .sub-menu li {

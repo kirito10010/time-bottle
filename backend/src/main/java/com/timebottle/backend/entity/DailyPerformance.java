@@ -43,7 +43,7 @@ public class DailyPerformance {
     @Column(name = "actual_workload", nullable = false, precision = 10, scale = 2)
     private BigDecimal actualWorkload;
 
-    @Column(name = "performance_man_days", nullable = false, precision = 10, scale = 3, insertable = false, updatable = false)
+    @Column(name = "performance_man_days", nullable = false, precision = 10, scale = 5, insertable = false, updatable = false)
     private BigDecimal performanceManDays;
 
     @Column(name = "created_at", nullable = false, updatable = false)

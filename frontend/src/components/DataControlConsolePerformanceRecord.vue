@@ -14,15 +14,23 @@
     <div class="stats-section">
       <div class="stat-card performance-card">
         <div class="stat-title">绩效总和</div>
-        <div class="stat-value performance-value">{{ totalPerformanceDays.toFixed(3) }} 天</div>
+        <div class="stat-value performance-value">{{ totalPerformanceDays.toFixed(5) }}</div>
       </div>
       <div class="stat-card attendance-card">
         <div class="stat-title">考勤天数</div>
-        <div class="stat-value attendance-value">{{ attendanceDays }} 天</div>
+        <div class="stat-value attendance-value">{{ attendanceDays }}</div>
       </div>
       <div class="stat-card average-card">
         <div class="stat-title">日均绩效</div>
-        <div class="stat-value average-value">{{ dailyAveragePerformance.toFixed(3) }} 天</div>
+        <div class="stat-value average-value">{{ dailyAveragePerformance.toFixed(5) }}</div>
+      </div>
+      <div class="stat-card overtime-card">
+        <div class="stat-title">加班时长</div>
+        <div class="stat-value overtime-value">{{ totalOvertimeHours.toFixed(1) }} 小时</div>
+      </div>
+      <div class="stat-card salary-card">
+        <div class="stat-title">总工资</div>
+        <div class="stat-value salary-value">待开发</div>
       </div>
     </div>
 
@@ -66,7 +74,9 @@
   </div>
 
   <Teleport to="body">
-    <div v-if="showWorkReport" class="modal-overlay" @click="showWorkReport = false">
+    <div v-if="showWorkReport" class="modal-overlay" 
+      @mousedown="handleOverlayMouseDown" 
+      @mouseup="(e) => handleOverlayMouseUp(e, () => showWorkReport = false)">
       <div class="modal work-report-modal" @click.stop>
         <div class="modal-header">
           <h3>工作汇报</h3>
@@ -130,7 +140,7 @@
                 <td>{{ performance.processType }}</td>
                 <td>{{ performance.quotaEfficiency }}</td>
                 <td>{{ performance.actualWorkload }}</td>
-                <td>{{ performance.performanceManDays ? Number(performance.performanceManDays).toFixed(3) : '0.000' }}</td>
+                <td>{{ performance.performanceManDays ? Number(performance.performanceManDays).toFixed(5) : '0.00000' }}</td>
                 <td>
                   <button class="btn btn-sm btn-secondary" @click="openEditPerformance(performance)">编辑</button>
                   <button class="btn btn-sm btn-danger" @click="deletePerformance(performance.id)">删除</button>
@@ -164,7 +174,9 @@
   </Teleport>
 
   <Teleport to="body">
-    <div v-if="showAddPerformance || showEditPerformance" class="modal-overlay" @click="closePerformanceModal">
+    <div v-if="showAddPerformance || showEditPerformance" class="modal-overlay" 
+      @mousedown="handleOverlayMouseDown" 
+      @mouseup="(e) => handleOverlayMouseUp(e, closePerformanceModal)">
       <div class="modal modal-form" @click.stop>
         <form @submit.prevent="savePerformance">
           <div class="modal-header">
@@ -229,7 +241,9 @@
   </Teleport>
 
   <Teleport to="body">
-    <div v-if="showProjectConfig" class="modal-overlay" @click="showProjectConfig = false">
+    <div v-if="showProjectConfig" class="modal-overlay" 
+      @mousedown="handleOverlayMouseDown" 
+      @mouseup="(e) => handleOverlayMouseUp(e, () => showProjectConfig = false)">
       <div class="modal project-config-modal" @click.stop>
         <div class="modal-header">
           <h3>生产项目配置</h3>
@@ -302,7 +316,9 @@
   </Teleport>
 
   <Teleport to="body">
-    <div v-if="showAddProject || showEditProject" class="modal-overlay" @click="closeProjectModal">
+    <div v-if="showAddProject || showEditProject" class="modal-overlay" 
+      @mousedown="handleOverlayMouseDown" 
+      @mouseup="(e) => handleOverlayMouseUp(e, closeProjectModal)">
       <div class="modal modal-form" @click.stop>
         <form @submit.prevent="saveProject">
           <div class="modal-header">
@@ -332,7 +348,9 @@
   </Teleport>
 
   <Teleport to="body">
-    <div v-if="showOvertimeReport" class="modal-overlay" @click="showOvertimeReport = false">
+    <div v-if="showOvertimeReport" class="modal-overlay" 
+      @mousedown="handleOverlayMouseDown" 
+      @mouseup="(e) => handleOverlayMouseUp(e, () => showOvertimeReport = false)">
       <div class="modal work-report-modal" @click.stop>
         <div class="modal-header">
           <h3>加班汇报</h3>
@@ -394,7 +412,9 @@
   </Teleport>
 
   <Teleport to="body">
-    <div v-if="showAddOvertime || showEditOvertime" class="modal-overlay" @click="closeOvertimeModal">
+    <div v-if="showAddOvertime || showEditOvertime" class="modal-overlay" 
+      @mousedown="handleOverlayMouseDown" 
+      @mouseup="(e) => handleOverlayMouseUp(e, closeOvertimeModal)">
       <div class="modal modal-form" @click.stop>
         <form @submit.prevent="saveOvertime">
           <div class="modal-header">
@@ -444,14 +464,469 @@
   </Teleport>
 
   <Teleport to="body">
-    <div v-if="showSalaryRecord" class="modal-overlay" @click="showSalaryRecord = false">
-      <div class="modal placeholder-modal" @click.stop>
+    <div v-if="showSalaryRecord" class="modal-overlay" 
+      @mousedown="handleOverlayMouseDown" 
+      @mouseup="(e) => handleOverlayMouseUp(e, () => showSalaryRecord = false)">
+      <div class="modal work-report-modal" @click.stop>
         <div class="modal-header">
           <h3>工资记录</h3>
+          <div class="modal-header-actions">
+            <button class="btn btn-primary" @click="openAddSalary">记录工资</button>
+            <button class="btn btn-secondary" @click="openSalaryConfig">工资配置</button>
+            <button class="btn btn-danger" @click="batchDeleteSalaries" :disabled="selectedSalaries.length === 0">批量删除</button>
+          </div>
         </div>
-        <div class="placeholder-content">
-          <p>功能开发中...</p>
+        
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th><input type="checkbox" v-model="selectAllSalaries" @change="toggleSelectAllSalaries"></th>
+                <th>月份</th>
+                <th>出勤天数</th>
+                <th>基本薪资</th>
+                <th>绩效薪资</th>
+                <th>加班薪资</th>
+                <th>应发总额</th>
+                <th>扣除总额</th>
+                <th>实发薪资</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="salary in paginatedSalaries" :key="salary.id">
+                <td><input type="checkbox" v-model="selectedSalaries" :value="salary.id"></td>
+                <td>{{ salary.month }}</td>
+                <td>{{ salary.attendanceDays }}</td>
+                <td>{{ formatMoney(salary.basicSalary) }}</td>
+                <td>{{ formatMoney(salary.performanceSalary) }}</td>
+                <td>{{ formatMoney(salary.overtimeSalary) }}</td>
+                <td class="payable">{{ formatMoney(salary.totalPayable) }}</td>
+                <td class="deduction">{{ formatMoney(salary.totalDeduction) }}</td>
+                <td class="net-salary">{{ formatMoney(salary.netSalary) }}</td>
+                <td>
+                  <button class="btn btn-sm btn-secondary" @click="openEditSalary(salary)">编辑</button>
+                  <button class="btn btn-sm btn-danger" @click="deleteSalary(salary.id)">删除</button>
+                </td>
+              </tr>
+              <tr v-if="salaries.length === 0">
+                <td colspan="10" class="empty-row">暂无工资记录</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+        
+        <div class="pagination" v-if="salaries.length > 0">
+          <button class="btn btn-sm" :disabled="salaryCurrentPage === 1" @click="salaryCurrentPage--">上一页</button>
+          <span>第 {{ salaryCurrentPage }} / {{ salaryTotalPages }} 页</span>
+          <button class="btn btn-sm" :disabled="salaryCurrentPage === salaryTotalPages" @click="salaryCurrentPage++">下一页</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- 添加/编辑工资弹窗 -->
+  <Teleport to="body">
+    <div v-if="showAddSalary || showEditSalary" class="modal-overlay" 
+      @mousedown="handleOverlayMouseDown" 
+      @mouseup="(e) => handleOverlayMouseUp(e, closeSalaryModal)">
+      <div class="modal modal-form" @click.stop>
+        <form @submit.prevent="saveSalary">
+          <div class="modal-header">
+            <h3>{{ showEditSalary ? '编辑工资' : '记录工资' }}</h3>
+            <div class="modal-header-actions">
+              <button type="submit" class="btn btn-primary">保存</button>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>月份</label>
+              <el-date-picker
+                v-model="salaryForm.month"
+                type="month"
+                placeholder="选择月份"
+                value-format="YYYY-MM"
+                style="width: 100%"
+              />
+            </div>
+            <div class="form-group">
+              <label>出勤天数</label>
+              <el-input-number
+                v-model="salaryForm.attendanceDays"
+                :min="0"
+                :step="0.5"
+                :precision="1"
+                placeholder="自动计算"
+                style="width: 100%"
+                disabled
+              />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>周期开始日期</label>
+              <el-date-picker
+                v-model="salaryForm.periodStartDate"
+                type="date"
+                placeholder="自动计算"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+                disabled
+              />
+            </div>
+            <div class="form-group">
+              <label>周期结束日期</label>
+              <el-date-picker
+                v-model="salaryForm.periodEndDate"
+                type="date"
+                placeholder="自动计算"
+                value-format="YYYY-MM-DD"
+                style="width: 100%"
+                disabled
+              />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>基本薪资</label>
+              <el-input-number
+                v-model="salaryForm.basicSalary"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="基本薪资"
+                style="width: 100%"
+              />
+            </div>
+            <div class="form-group">
+              <label>绩效总和</label>
+              <el-input-number
+                v-model="salaryForm.performanceCoefficient"
+                :min="0"
+                :step="0.1"
+                :precision="5"
+                placeholder="自动计算"
+                style="width: 100%"
+                disabled
+              />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>绩效薪资</label>
+              <el-input-number
+                v-model="salaryForm.performanceSalary"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="自动计算"
+                style="width: 100%"
+                disabled
+              />
+            </div>
+            <div class="form-group">
+              <label>岗位绩效</label>
+              <el-input-number
+                v-model="salaryForm.positionPerformance"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="岗位绩效"
+                style="width: 100%"
+              />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>餐补</label>
+              <el-input-number
+                v-model="salaryForm.mealAllowance"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="餐补"
+                style="width: 100%"
+              />
+            </div>
+            <div class="form-group">
+              <label>房补</label>
+              <el-input-number
+                v-model="salaryForm.housingAllowance"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="房补"
+                style="width: 100%"
+              />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>全勤奖</label>
+              <el-input-number
+                v-model="salaryForm.fullAttendanceBonus"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="全勤奖"
+                style="width: 100%"
+              />
+            </div>
+            <div class="form-group">
+              <label>其他奖金</label>
+              <el-input-number
+                v-model="salaryForm.otherBonus"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="其他奖金"
+                style="width: 100%"
+              />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>加班时长(小时)</label>
+              <el-input-number
+                v-model="salaryForm.overtimeHours"
+                :min="0"
+                :step="0.5"
+                :precision="1"
+                placeholder="自动计算"
+                style="width: 100%"
+                disabled
+              />
+            </div>
+            <div class="form-group">
+              <label>加班薪资</label>
+              <el-input-number
+                v-model="salaryForm.overtimeSalary"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="自动计算"
+                style="width: 100%"
+                disabled
+              />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>养老保险</label>
+              <el-input-number
+                v-model="salaryForm.pensionInsurance"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="养老保险"
+                style="width: 100%"
+              />
+            </div>
+            <div class="form-group">
+              <label>医疗保险</label>
+              <el-input-number
+                v-model="salaryForm.medicalInsurance"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="医疗保险"
+                style="width: 100%"
+              />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>失业保险</label>
+              <el-input-number
+                v-model="salaryForm.unemploymentInsurance"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="失业保险"
+                style="width: 100%"
+              />
+            </div>
+            <div class="form-group">
+              <label>迟到扣款</label>
+              <el-input-number
+                v-model="salaryForm.lateDeduction"
+                :min="0"
+                :step="10"
+                :precision="2"
+                placeholder="迟到扣款"
+                style="width: 100%"
+              />
+            </div>
+          </div>
+          
+          <div class="form-summary">
+            <div class="summary-item">
+              <span>应发总额：</span>
+              <span class="payable">{{ formatMoney(calculatedTotalPayable) }}</span>
+            </div>
+            <div class="summary-item">
+              <span>扣除总额：</span>
+              <span class="deduction">{{ formatMoney(calculatedTotalDeduction) }}</span>
+            </div>
+            <div class="summary-item net">
+              <span>实发薪资：</span>
+              <span class="net-salary">{{ formatMoney(calculatedNetSalary) }}</span>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- 工资配置弹窗 -->
+  <Teleport to="body">
+    <div v-if="showSalaryConfig" class="modal-overlay" 
+      @mousedown="handleOverlayMouseDown" 
+      @mouseup="(e) => handleOverlayMouseUp(e, () => showSalaryConfig = false)">
+      <div class="modal modal-form" @click.stop>
+        <form @submit.prevent="saveSalaryConfig">
+          <div class="modal-header">
+            <h3>工资配置</h3>
+            <div class="modal-header-actions">
+              <button type="button" class="btn btn-secondary" @click="resetSalaryConfig">重置默认</button>
+              <button type="submit" class="btn btn-primary">保存配置</button>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>基本薪资</label>
+              <el-input-number
+                v-model="tempSalaryConfig.basicSalary"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="基本薪资"
+                style="width: 100%"
+              />
+            </div>
+            <div class="form-group">
+              <label>岗位绩效</label>
+              <el-input-number
+                v-model="tempSalaryConfig.positionPerformance"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="岗位绩效"
+                style="width: 100%"
+              />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>餐补</label>
+              <el-input-number
+                v-model="tempSalaryConfig.mealAllowance"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="餐补"
+                style="width: 100%"
+              />
+            </div>
+            <div class="form-group">
+              <label>房补</label>
+              <el-input-number
+                v-model="tempSalaryConfig.housingAllowance"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="房补"
+                style="width: 100%"
+              />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>全勤奖</label>
+              <el-input-number
+                v-model="tempSalaryConfig.fullAttendanceBonus"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="全勤奖"
+                style="width: 100%"
+              />
+            </div>
+            <div class="form-group">
+              <label>其他奖金</label>
+              <el-input-number
+                v-model="tempSalaryConfig.otherBonus"
+                :min="0"
+                :step="100"
+                :precision="2"
+                placeholder="其他奖金"
+                style="width: 100%"
+              />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>养老保险</label>
+              <el-input-number
+                v-model="tempSalaryConfig.pensionInsurance"
+                :min="0"
+                :step="0.01"
+                :precision="2"
+                placeholder="养老保险"
+                style="width: 100%"
+              />
+            </div>
+            <div class="form-group">
+              <label>医疗保险</label>
+              <el-input-number
+                v-model="tempSalaryConfig.medicalInsurance"
+                :min="0"
+                :step="0.01"
+                :precision="2"
+                placeholder="医疗保险"
+                style="width: 100%"
+              />
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>失业保险</label>
+              <el-input-number
+                v-model="tempSalaryConfig.unemploymentInsurance"
+                :min="0"
+                :step="0.01"
+                :precision="2"
+                placeholder="失业保险"
+                style="width: 100%"
+              />
+            </div>
+            <div class="form-group">
+              <label>迟到扣款</label>
+              <el-input-number
+                v-model="tempSalaryConfig.lateDeduction"
+                :min="0"
+                :step="0.01"
+                :precision="2"
+                placeholder="迟到扣款"
+                style="width: 100%"
+              />
+            </div>
+          </div>
+        </form>
       </div>
     </div>
   </Teleport>
@@ -459,11 +934,24 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, onUnmounted, markRaw } from 'vue';
-import { ElMessage, ElDatePicker, ElSelect, ElOption, ElMessageBox, ElInput } from 'element-plus';
+import { ElMessage, ElDatePicker, ElSelect, ElOption, ElMessageBox, ElInput, ElInputNumber } from 'element-plus';
 import zhCn from 'element-plus/es/locale/lang/zh-cn';
 import * as echarts from 'echarts';
 
 const API_BASE = 'http://localhost:8080/api';
+
+let mouseDownTarget = null;
+
+const handleOverlayMouseDown = (event) => {
+  mouseDownTarget = event.target;
+};
+
+const handleOverlayMouseUp = (event, closeCallback) => {
+  if (mouseDownTarget === event.target && event.target.classList.contains('modal-overlay')) {
+    closeCallback();
+  }
+  mouseDownTarget = null;
+};
 
 const showWorkReport = ref(false);
 const showOvertimeReport = ref(false);
@@ -475,16 +963,70 @@ const showAddProject = ref(false);
 const showEditProject = ref(false);
 const showAddOvertime = ref(false);
 const showEditOvertime = ref(false);
+const showAddSalary = ref(false);
+const showEditSalary = ref(false);
+const showSalaryConfig = ref(false);
+
+const DEFAULT_SALARY_CONFIG = {
+  basicSalary: 2000,
+  positionPerformance: 500,
+  mealAllowance: 200,
+  housingAllowance: 300,
+  fullAttendanceBonus: 300,
+  otherBonus: 100,
+  pensionInsurance: 360.32,
+  medicalInsurance: 90.08,
+  unemploymentInsurance: 13.51,
+  lateDeduction: 0
+};
+
+const salaryConfig = ref({ ...DEFAULT_SALARY_CONFIG });
+const tempSalaryConfig = ref({ ...DEFAULT_SALARY_CONFIG });
+
+const loadSalaryConfig = () => {
+  const saved = localStorage.getItem('salaryConfig');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      salaryConfig.value = { ...DEFAULT_SALARY_CONFIG, ...parsed };
+    } catch (e) {
+      salaryConfig.value = { ...DEFAULT_SALARY_CONFIG };
+    }
+  }
+};
+
+const openSalaryConfig = () => {
+  tempSalaryConfig.value = { ...salaryConfig.value };
+  showSalaryConfig.value = true;
+};
+
+const saveSalaryConfig = () => {
+  salaryConfig.value = { ...tempSalaryConfig.value };
+  localStorage.setItem('salaryConfig', JSON.stringify(salaryConfig.value));
+  ElMessage.success('配置已保存');
+  showSalaryConfig.value = false;
+};
+
+const resetSalaryConfig = () => {
+  tempSalaryConfig.value = { ...DEFAULT_SALARY_CONFIG };
+  ElMessage.success('已重置为默认配置');
+};
 
 const performances = ref([]);
 const projects = ref([]);
 const overtimes = ref([]);
+const salaries = ref([]);
 const selectedPerformances = ref([]);
 const selectedProjects = ref([]);
 const selectedOvertimes = ref([]);
+const selectedSalaries = ref([]);
 const selectAllPerformances = ref(false);
 const selectAllProjects = ref(false);
 const selectAllOvertimes = ref(false);
+const selectAllSalaries = ref(false);
+
+const salaryCurrentPage = ref(1);
+const salaryPageSize = 10;
 
 const filterDateRange = ref(null);
 const filterProjectId = ref(null);
@@ -523,6 +1065,91 @@ const overtimeForm = ref({
   description: ''
 });
 const editingOvertimeId = ref(null);
+
+const salaryForm = ref({
+  id: null,
+  month: '',
+  periodStartDate: '',
+  periodEndDate: '',
+  attendanceDays: 0,
+  basicSalary: DEFAULT_SALARY_CONFIG.basicSalary,
+  performanceCoefficient: 1,
+  performanceSalary: 0,
+  positionPerformance: DEFAULT_SALARY_CONFIG.positionPerformance,
+  mealAllowance: DEFAULT_SALARY_CONFIG.mealAllowance,
+  housingAllowance: DEFAULT_SALARY_CONFIG.housingAllowance,
+  fullAttendanceBonus: DEFAULT_SALARY_CONFIG.fullAttendanceBonus,
+  otherBonus: DEFAULT_SALARY_CONFIG.otherBonus,
+  pensionInsurance: DEFAULT_SALARY_CONFIG.pensionInsurance,
+  medicalInsurance: DEFAULT_SALARY_CONFIG.medicalInsurance,
+  unemploymentInsurance: DEFAULT_SALARY_CONFIG.unemploymentInsurance,
+  lateDeduction: DEFAULT_SALARY_CONFIG.lateDeduction,
+  overtimeHours: 0,
+  overtimeSalary: 0
+});
+const editingSalaryId = ref(null);
+
+watch(() => salaryForm.value.month, (newMonth) => {
+  if (newMonth) {
+    const [year, month] = newMonth.split('-').map(Number);
+    const periodStart = new Date(year, month - 2, 26);
+    const periodEnd = new Date(year, month - 1, 25);
+    
+    const formatDate = (date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+    
+    salaryForm.value.periodStartDate = formatDate(periodStart);
+    salaryForm.value.periodEndDate = formatDate(periodEnd);
+    
+    const filteredPerformances = allPerformances.value.filter(p => {
+      const recordDate = p.recordDate;
+      return recordDate >= salaryForm.value.periodStartDate && recordDate <= salaryForm.value.periodEndDate;
+    });
+    
+    const filteredOvertimes = allOvertimes.value.filter(o => {
+      const recordDate = o.recordDate;
+      return recordDate >= salaryForm.value.periodStartDate && recordDate <= salaryForm.value.periodEndDate;
+    });
+    
+    if (filteredPerformances.length > 0) {
+      const performanceSum = filteredPerformances.reduce((sum, p) => {
+        return sum + (Number(p.performanceManDays) || 0);
+      }, 0);
+      
+      const uniqueDates = new Set(filteredPerformances.map(p => p.recordDate));
+      const attendanceDays = uniqueDates.size;
+      const baseDeduction = attendanceDays;
+      
+      const overtimeDeduction = filteredOvertimes.reduce((sum, o) => {
+        const hours = Number(o.overtimeHours) || 0;
+        return sum + (hours * 0.125);
+      }, 0);
+      
+      const totalPerformanceDays = performanceSum - baseDeduction - overtimeDeduction;
+      const dailyAverage = totalPerformanceDays / attendanceDays;
+      
+      const overtimeHours = filteredOvertimes.reduce((sum, o) => {
+        return sum + (Number(o.overtimeHours) || 0);
+      }, 0);
+      
+      salaryForm.value.attendanceDays = attendanceDays;
+      salaryForm.value.performanceCoefficient = Number(totalPerformanceDays.toFixed(5));
+      salaryForm.value.performanceSalary = Number((totalPerformanceDays * 170 * 0.94).toFixed(2));
+      salaryForm.value.overtimeHours = overtimeHours;
+      salaryForm.value.overtimeSalary = Number((overtimeHours * 17).toFixed(2));
+    } else {
+      salaryForm.value.attendanceDays = 0;
+      salaryForm.value.performanceCoefficient = 0;
+      salaryForm.value.performanceSalary = 0;
+      salaryForm.value.overtimeHours = 0;
+      salaryForm.value.overtimeSalary = 0;
+    }
+  }
+});
 
 const projectForm = ref({
   id: null,
@@ -564,9 +1191,9 @@ const visibleProjectPages = computed(() => {
 
 const calculatedManDays = computed(() => {
   if (performanceForm.value.quotaEfficiency > 0 && performanceForm.value.actualWorkload > 0) {
-    return (performanceForm.value.actualWorkload / performanceForm.value.quotaEfficiency).toFixed(3);
+    return (performanceForm.value.actualWorkload / performanceForm.value.quotaEfficiency).toFixed(5);
   }
-  return '0.000';
+  return '0.00000';
 });
 
 const formatDateToLocal = (date) => {
@@ -616,11 +1243,28 @@ const getFilteredPerformances = computed(() => {
   });
 });
 
+const getFilteredOvertimes = computed(() => {
+  const { startDateStr, endDateStr } = getChartDateRange();
+  return allOvertimes.value.filter(o => {
+    return o.recordDate >= startDateStr && o.recordDate <= endDateStr;
+  });
+});
+
 const totalPerformanceDays = computed(() => {
-  return getFilteredPerformances.value.reduce((sum, p) => {
+  const performanceSum = getFilteredPerformances.value.reduce((sum, p) => {
     const dailyPerformance = Number(p.performanceManDays) || 0;
-    return sum + (dailyPerformance - 1);
+    return sum + dailyPerformance;
   }, 0);
+  
+  const uniqueDates = new Set(getFilteredPerformances.value.map(p => p.recordDate));
+  const baseDeduction = uniqueDates.size;
+  
+  const overtimeDeduction = getFilteredOvertimes.value.reduce((sum, o) => {
+    const hours = Number(o.overtimeHours) || 0;
+    return sum + (hours * 0.125);
+  }, 0);
+  
+  return performanceSum - baseDeduction - overtimeDeduction;
 });
 
 const attendanceDays = computed(() => {
@@ -632,6 +1276,48 @@ const dailyAveragePerformance = computed(() => {
   if (attendanceDays.value === 0) return 0;
   return totalPerformanceDays.value / attendanceDays.value;
 });
+
+const totalOvertimeHours = computed(() => {
+  return getFilteredOvertimes.value.reduce((sum, o) => {
+    const hours = Number(o.overtimeHours) || 0;
+    return sum + hours;
+  }, 0);
+});
+
+const salaryTotalPages = computed(() => Math.ceil(salaries.value.length / salaryPageSize) || 1);
+
+const paginatedSalaries = computed(() => {
+  const start = (salaryCurrentPage.value - 1) * salaryPageSize;
+  const end = start + salaryPageSize;
+  return salaries.value.slice(start, end);
+});
+
+const calculatedTotalPayable = computed(() => {
+  return (salaryForm.value.basicSalary || 0) +
+         (salaryForm.value.performanceSalary || 0) +
+         (salaryForm.value.positionPerformance || 0) +
+         (salaryForm.value.mealAllowance || 0) +
+         (salaryForm.value.housingAllowance || 0) +
+         (salaryForm.value.fullAttendanceBonus || 0) +
+         (salaryForm.value.otherBonus || 0) +
+         (salaryForm.value.overtimeSalary || 0);
+});
+
+const calculatedTotalDeduction = computed(() => {
+  return (salaryForm.value.pensionInsurance || 0) +
+         (salaryForm.value.medicalInsurance || 0) +
+         (salaryForm.value.unemploymentInsurance || 0) +
+         (salaryForm.value.lateDeduction || 0);
+});
+
+const calculatedNetSalary = computed(() => {
+  return calculatedTotalPayable.value - calculatedTotalDeduction.value;
+});
+
+const formatMoney = (value) => {
+  if (value === null || value === undefined) return '¥0.00';
+  return '¥' + Number(value).toFixed(2);
+};
 
 const chartTimeRange = ref('month');
 const chartDateRange = ref(null);
@@ -824,6 +1510,23 @@ const savePerformance = async () => {
     return;
   }
   
+  if (!performanceForm.value.recordDate) {
+    ElMessage.warning('请选择记录日期');
+    return;
+  }
+  if (!performanceForm.value.projectId) {
+    ElMessage.warning('请选择项目');
+    return;
+  }
+  if (!performanceForm.value.processType) {
+    ElMessage.warning('请选择工序类型');
+    return;
+  }
+  if (!performanceForm.value.actualWorkload || performanceForm.value.actualWorkload <= 0) {
+    ElMessage.warning('请输入实际工作量');
+    return;
+  }
+  
   try {
     const url = showEditPerformance.value 
       ? `${API_BASE}/daily-performances/${performanceForm.value.id}`
@@ -847,6 +1550,7 @@ const savePerformance = async () => {
       ElMessage.success(showEditPerformance.value ? '更新成功' : '汇报成功');
       closePerformanceModal();
       fetchPerformances();
+      updateChart();
     } else {
       ElMessage.error(data.message || '操作失败');
     }
@@ -868,6 +1572,7 @@ const deletePerformance = async (id) => {
     if (response.ok) {
       ElMessage.success('删除成功');
       fetchPerformances();
+      updateChart();
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -896,6 +1601,7 @@ const batchDeletePerformances = async () => {
       selectedPerformances.value = [];
       selectAllPerformances.value = false;
       fetchPerformances();
+      updateChart();
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -979,6 +1685,19 @@ const saveOvertime = async () => {
     return;
   }
   
+  if (!overtimeForm.value.recordDate) {
+    ElMessage.warning('请选择记录日期');
+    return;
+  }
+  if (!overtimeForm.value.projectId) {
+    ElMessage.warning('请选择项目');
+    return;
+  }
+  if (!overtimeForm.value.overtimeHours || overtimeForm.value.overtimeHours <= 0) {
+    ElMessage.warning('请输入加班时长');
+    return;
+  }
+  
   try {
     const url = showEditOvertime.value 
       ? `${API_BASE}/overtime-records/${editingOvertimeId.value}`
@@ -1003,6 +1722,7 @@ const saveOvertime = async () => {
       ElMessage.success(showEditOvertime.value ? '更新成功' : '添加成功');
       closeOvertimeModal();
       fetchOvertimes();
+      updateChart();
     } else {
       ElMessage.error(data.message || '保存失败');
     }
@@ -1024,6 +1744,7 @@ const deleteOvertime = async (id) => {
     if (response.ok) {
       ElMessage.success('删除成功');
       fetchOvertimes();
+      updateChart();
     }
   } catch (error) {
     if (error !== 'cancel') {
@@ -1052,11 +1773,189 @@ const batchDeleteOvertimes = async () => {
       selectedOvertimes.value = [];
       selectAllOvertimes.value = false;
       fetchOvertimes();
+      updateChart();
     }
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('批量删除失败');
     }
+  }
+};
+
+// 工资记录相关函数
+const fetchSalaries = async () => {
+  const uid = getUid();
+  if (!uid) return;
+  
+  try {
+    const response = await fetch(`${API_BASE}/salary-records?uid=${uid}`);
+    const data = await response.json();
+    salaries.value = data.records || [];
+  } catch (error) {
+    console.error('获取工资记录失败:', error);
+  }
+};
+
+const openAddSalary = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  
+  salaryForm.value = {
+    id: null,
+    month: `${year}-${month}`,
+    periodStartDate: '',
+    periodEndDate: '',
+    attendanceDays: 0,
+    basicSalary: salaryConfig.value.basicSalary,
+    performanceCoefficient: 1,
+    performanceSalary: 0,
+    positionPerformance: salaryConfig.value.positionPerformance,
+    mealAllowance: salaryConfig.value.mealAllowance,
+    housingAllowance: salaryConfig.value.housingAllowance,
+    fullAttendanceBonus: salaryConfig.value.fullAttendanceBonus,
+    otherBonus: salaryConfig.value.otherBonus,
+    pensionInsurance: salaryConfig.value.pensionInsurance,
+    medicalInsurance: salaryConfig.value.medicalInsurance,
+    unemploymentInsurance: salaryConfig.value.unemploymentInsurance,
+    lateDeduction: salaryConfig.value.lateDeduction,
+    overtimeHours: 0,
+    overtimeSalary: 0
+  };
+  showAddSalary.value = true;
+  showSalaryRecord.value = false;
+};
+
+const openEditSalary = (salary) => {
+  salaryForm.value = {
+    id: salary.id,
+    month: salary.month,
+    periodStartDate: salary.periodStartDate,
+    periodEndDate: salary.periodEndDate,
+    attendanceDays: salary.attendanceDays,
+    basicSalary: salary.basicSalary,
+    performanceCoefficient: salary.performanceCoefficient,
+    performanceSalary: salary.performanceSalary,
+    positionPerformance: salary.positionPerformance,
+    mealAllowance: salary.mealAllowance,
+    housingAllowance: salary.housingAllowance,
+    fullAttendanceBonus: salary.fullAttendanceBonus,
+    otherBonus: salary.otherBonus,
+    pensionInsurance: salary.pensionInsurance,
+    medicalInsurance: salary.medicalInsurance,
+    unemploymentInsurance: salary.unemploymentInsurance,
+    lateDeduction: salary.lateDeduction,
+    overtimeHours: salary.overtimeHours,
+    overtimeSalary: salary.overtimeSalary
+  };
+  editingSalaryId.value = salary.id;
+  showEditSalary.value = true;
+  showSalaryRecord.value = false;
+};
+
+const closeSalaryModal = () => {
+  showAddSalary.value = false;
+  showEditSalary.value = false;
+  showSalaryRecord.value = true;
+};
+
+const saveSalary = async () => {
+  const uid = getUid();
+  if (!uid) {
+    ElMessage.error('请先登录');
+    return;
+  }
+  
+  if (!salaryForm.value.month) {
+    ElMessage.warning('请选择月份');
+    return;
+  }
+  if (!salaryForm.value.periodStartDate || !salaryForm.value.periodEndDate) {
+    ElMessage.warning('请选择周期日期');
+    return;
+  }
+  
+  try {
+    const url = showEditSalary.value 
+      ? `${API_BASE}/salary-records/${editingSalaryId.value}`
+      : `${API_BASE}/salary-records`;
+    
+    const response = await fetch(url, {
+      method: showEditSalary.value ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uid,
+        ...salaryForm.value
+      })
+    });
+    
+    const data = await response.json();
+    if (response.ok) {
+      ElMessage.success(showEditSalary.value ? '更新成功' : '记录成功');
+      closeSalaryModal();
+      fetchSalaries();
+    } else {
+      ElMessage.error(data.message || '操作失败');
+    }
+  } catch (error) {
+    console.error('保存工资记录失败:', error);
+    ElMessage.error('保存失败');
+  }
+};
+
+const deleteSalary = async (id) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这条记录吗？', '删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+    
+    const response = await fetch(`${API_BASE}/salary-records/${id}`, { method: 'DELETE' });
+    if (response.ok) {
+      ElMessage.success('删除成功');
+      fetchSalaries();
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败');
+    }
+  }
+};
+
+const batchDeleteSalaries = async () => {
+  if (selectedSalaries.value.length === 0) return;
+  
+  try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${selectedSalaries.value.length} 条记录吗？`, '批量删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    });
+    
+    const response = await fetch(`${API_BASE}/salary-records/batch`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: selectedSalaries.value })
+    });
+    if (response.ok) {
+      ElMessage.success('批量删除成功');
+      selectedSalaries.value = [];
+      selectAllSalaries.value = false;
+      fetchSalaries();
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('批量删除失败');
+    }
+  }
+};
+
+const toggleSelectAllSalaries = () => {
+  if (selectAllSalaries.value) {
+    selectedSalaries.value = paginatedSalaries.value.map(s => s.id);
+  } else {
+    selectedSalaries.value = [];
   }
 };
 
@@ -1283,7 +2182,7 @@ const updateChart = () => {
         if (!params || params.length === 0) return '';
         const date = params[0].axisValue;
         const value = params[0].value || 0;
-        return `<div style="font-size:14px;font-weight:600;color:#1e40af;margin-bottom:8px;">${date}</div><div style="display:flex;justify-content:space-between;align-items:center;"><span style="color:#64748b;">绩效人天</span><span style="color:#4299e1;font-weight:600;font-size:14px;">${value.toFixed(3)} 天</span></div>`;
+        return `<div style="font-size:14px;font-weight:600;color:#1e40af;margin-bottom:8px;">${date}</div><div style="display:flex;justify-content:space-between;align-items:center;"><span style="color:#64748b;">绩效人天</span><span style="color:#409EFF;font-weight:600;font-size:14px;">${value.toFixed(5)} 天</span></div>`;
       }
     },
     grid: {
@@ -1304,7 +2203,8 @@ const updateChart = () => {
       },
       axisLabel: {
         color: '#718096',
-        fontSize: 11
+        fontSize: 11,
+        rotate: 45
       }
     }],
     yAxis: [{
@@ -1333,11 +2233,11 @@ const updateChart = () => {
       symbol: 'circle',
       symbolSize: 6,
       lineStyle: {
-        width: 3,
-        color: '#4299e1'
+        width: 2,
+        color: '#409EFF'
       },
       itemStyle: {
-        color: '#4299e1'
+        color: '#409EFF'
       },
       areaStyle: {
         color: {
@@ -1355,7 +2255,26 @@ const updateChart = () => {
           }]
         }
       },
-      data: values
+      data: values,
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        label: {
+          show: true,
+          position: 'end',
+          formatter: '底量线',
+          color: '#E6A23C',
+          fontSize: 12
+        },
+        lineStyle: {
+          color: '#E6A23C',
+          type: 'dashed',
+          width: 2
+        },
+        data: [{
+          yAxis: 1
+        }]
+      }
     }]
   };
   
@@ -1393,11 +2312,23 @@ const handleResize = () => {
   }
 };
 
+let resizeObserver = null;
+
 onMounted(() => {
+  loadSalaryConfig();
   fetchProjects();
   fetchPerformances();
+  fetchOvertimes();
+  fetchSalaries();
   
   window.addEventListener('resize', handleResize);
+  
+  if (chartRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    resizeObserver.observe(chartRef.value);
+  }
   
   setTimeout(() => {
     initChart();
@@ -1406,6 +2337,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
   if (chartInstance) {
     chartInstance.dispose();
     chartInstance = null;
@@ -1481,11 +2416,11 @@ onUnmounted(() => {
 }
 
 .performance-card {
-  border-left: 4px solid #4299e1;
+  border-left: 4px solid #409EFF;
 }
 
 .performance-value {
-  color: #4299e1;
+  color: #409EFF;
 }
 
 .attendance-card {
@@ -1502,6 +2437,67 @@ onUnmounted(() => {
 
 .average-value {
   color: #ed8936;
+}
+
+.overtime-card {
+  border-left: 4px solid #9f7aea;
+}
+
+.overtime-value {
+  color: #9f7aea;
+}
+
+.salary-card {
+  border-left: 4px solid #f56565;
+}
+
+.salary-value {
+  color: #f56565;
+}
+
+.form-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a5568;
+  margin: 16px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.form-summary {
+  display: flex;
+  justify-content: flex-end;
+  gap: 24px;
+  margin-top: 20px;
+  padding: 16px 16px 0 16px;
+  border-top: 2px solid #e2e8f0;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.summary-item.net {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.payable {
+  color: #38a169;
+  font-weight: 600;
+}
+
+.deduction {
+  color: #e53e3e;
+  font-weight: 600;
+}
+
+.net-salary {
+  color: #3182ce;
+  font-weight: 700;
 }
 
 .chart-section {
@@ -1555,8 +2551,8 @@ onUnmounted(() => {
 }
 
 .time-btn.active {
-  background: #4299e1;
-  border-color: #4299e1;
+  background: #409EFF;
+  border-color: #409EFF;
   color: #ffffff;
 }
 
@@ -1872,8 +2868,8 @@ onUnmounted(() => {
 }
 
 .page-number.active {
-  background: #4299e1;
-  border-color: #4299e1;
+  background: #409EFF;
+  border-color: #409EFF;
   color: #ffffff;
 }
 
@@ -1893,6 +2889,9 @@ onUnmounted(() => {
 }
 
 .form-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 12px 16px;
 }
 
@@ -1907,15 +2906,16 @@ onUnmounted(() => {
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 8px;
+  white-space: nowrap;
   font-weight: 500;
   color: #4a5568;
+  min-width: 100px;
+  width: 100px;
 }
 
 .form-group input,
 .form-group select {
-  width: 100%;
+  flex: 1;
   padding: 0 12px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -1927,7 +2927,7 @@ onUnmounted(() => {
 }
 
 :deep(.custom-date-picker) {
-  width: 100%;
+  flex: 1;
   height: 34px;
 }
 
@@ -1936,9 +2936,21 @@ onUnmounted(() => {
   min-height: auto; 
 }
 
+:deep(.el-input-number) {
+  flex: 1;
+}
+
+:deep(.el-date-editor) {
+  flex: 1;
+}
+
+:deep(.el-input__wrapper) {
+  height: 34px;
+}
+
 .form-group input:focus,
 .form-group select:focus {
-  border-color: #4299e1;
+  border-color: #409EFF;
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
   outline: none;
 }

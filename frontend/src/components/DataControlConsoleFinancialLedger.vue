@@ -71,7 +71,9 @@
     
     <!-- 添加/编辑分类弹窗 -->
     <Teleport to="body">
-      <div v-if="showAddCategory || showEditCategory" class="modal-overlay" @click="showAddCategory = showEditCategory = false; showCategoryManagement = true">
+      <div v-if="showAddCategory || showEditCategory" class="modal-overlay" 
+        @mousedown="handleOverlayMouseDown" 
+        @mouseup="(e) => handleOverlayMouseUp(e, () => { showAddCategory = showEditCategory = false; showCategoryManagement = true; })">
       <div class="modal modal-form" @click.stop>
         <form @submit.prevent="saveCategory">
           <div class="modal-header">
@@ -120,7 +122,9 @@
     
     <!-- 账单管理弹窗 -->
     <Teleport to="body">
-      <div v-if="showBillManagement" class="modal-overlay" @click="showBillManagement = false">
+      <div v-if="showBillManagement" class="modal-overlay" 
+        @mousedown="handleOverlayMouseDown" 
+        @mouseup="(e) => handleOverlayMouseUp(e, () => showBillManagement = false)">
       <div class="modal bill-management-modal" @click.stop>
         <div class="modal-header">
           <h3>账单管理</h3>
@@ -274,7 +278,9 @@
     
     <!-- 添加账单弹窗 -->
     <Teleport to="body">
-      <div v-if="showAddBill" class="modal-overlay" @click="showAddBill = false; showBillManagement = true">
+      <div v-if="showAddBill" class="modal-overlay" 
+        @mousedown="handleOverlayMouseDown" 
+        @mouseup="(e) => handleOverlayMouseUp(e, () => { showAddBill = false; showBillManagement = true; })">
       <div class="modal modal-form" @click.stop>
         <form @submit.prevent="addBill">
           <div class="modal-header">
@@ -367,7 +373,9 @@
     
     <!-- 分类管理弹窗 -->
     <Teleport to="body">
-      <div v-if="showCategoryManagement" class="modal-overlay" @click="showCategoryManagement = false">
+      <div v-if="showCategoryManagement" class="modal-overlay" 
+        @mousedown="handleOverlayMouseDown" 
+        @mouseup="(e) => handleOverlayMouseUp(e, () => showCategoryManagement = false)">
       <div class="modal category-management-modal" @click.stop>
         <div class="modal-header">
           <h3>分类管理</h3>
@@ -444,7 +452,9 @@
     
     <!-- 编辑账单弹窗 -->
     <Teleport to="body">
-      <div v-if="showEditBill" class="modal-overlay" @click="showEditBill = false; showBillManagement = true">
+      <div v-if="showEditBill" class="modal-overlay" 
+        @mousedown="handleOverlayMouseDown" 
+        @mouseup="(e) => handleOverlayMouseUp(e, () => { showEditBill = false; showBillManagement = true; })">
       <div class="modal modal-form" @click.stop>
         <form @submit.prevent="updateBill">
           <div class="modal-header">
@@ -537,7 +547,9 @@
     
     <!-- 数据可视化弹窗 -->
     <Teleport to="body">
-      <div v-if="showDataVisualization" class="modal-overlay" @click="showDataVisualization = false">
+      <div v-if="showDataVisualization" class="modal-overlay" 
+        @mousedown="handleOverlayMouseDown" 
+        @mouseup="(e) => handleOverlayMouseUp(e, () => showDataVisualization = false)">
       <div class="modal data-visualization-modal" @click.stop>
         <div class="modal-header">
           <h3>数据可视化</h3>
@@ -602,7 +614,9 @@
     
     <!-- 导入导出弹窗 -->
     <Teleport to="body">
-      <div v-if="showImportExport" class="modal-overlay" @click="showImportExport = false">
+      <div v-if="showImportExport" class="modal-overlay" 
+        @mousedown="handleOverlayMouseDown" 
+        @mouseup="(e) => handleOverlayMouseUp(e, () => showImportExport = false)">
       <div class="modal import-export-modal" @click.stop>
         <div class="modal-header">
           <h3>数据导入导出</h3>
@@ -671,6 +685,20 @@ import zhCn from 'element-plus/es/locale/lang/zh-cn';
 // 用户信息缓存
 let cachedUser = null;
 let cachedUserId = null;
+
+// 弹窗关闭逻辑
+let mouseDownTarget = null;
+
+const handleOverlayMouseDown = (event) => {
+  mouseDownTarget = event.target;
+};
+
+const handleOverlayMouseUp = (event, closeCallback) => {
+  if (mouseDownTarget === event.target && event.target.classList.contains('modal-overlay')) {
+    closeCallback();
+  }
+  mouseDownTarget = null;
+};
 
 // 防抖函数
 const debounce = (fn, delay) => {
@@ -1570,7 +1598,7 @@ const debouncedUpdateChart = debounce(async () => {
           symbol: 'circle',
           symbolSize: 6,
           lineStyle: {
-            width: 3,
+            width: 2,
             shadowColor: 'rgba(56, 161, 105, 0.3)',
             shadowBlur: 10,
             shadowOffsetY: 5
@@ -1598,7 +1626,7 @@ const debouncedUpdateChart = debounce(async () => {
           symbol: 'circle',
           symbolSize: 6,
           lineStyle: {
-            width: 3,
+            width: 2,
             shadowColor: 'rgba(229, 62, 62, 0.3)',
             shadowBlur: 10,
             shadowOffsetY: 5
@@ -2500,7 +2528,7 @@ watch(showDataVisualization, (newValue) => {
 }
 
 .balance-value {
-  color: #4299e1;
+  color: #409EFF;
 }
 
 /* 图表区域 */
@@ -2553,11 +2581,11 @@ watch(showDataVisualization, (newValue) => {
 }
 
 .time-btn:hover {
-  color: #4299e1;
+  color: #409EFF;
 }
 
 .time-btn.active {
-  background-color: #4299e1;
+  background-color: #409EFF;
   color: white;
   box-shadow: 0 2px 4px rgba(66, 153, 225, 0.3);
 }
@@ -2593,11 +2621,11 @@ watch(showDataVisualization, (newValue) => {
 }
 
 .month-picker :deep(.el-input__wrapper:hover) {
-  border-color: #4299e1;
+  border-color: #409EFF;
 }
 
 .month-picker :deep(.el-input__wrapper.is-focus) {
-  border-color: #4299e1;
+  border-color: #409EFF;
   box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.2);
 }
 
@@ -3133,7 +3161,7 @@ watch(showDataVisualization, (newValue) => {
 .filter-input:focus,
 .amount-input:focus {
   outline: none;
-  border-color: #4299e1;
+  border-color: #409EFF;
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
@@ -3371,7 +3399,7 @@ watch(showDataVisualization, (newValue) => {
 .modal-form .form-group input:focus,
 .modal-form .form-group select:focus {
   background-color: #ffffff;
-  border-color: #4299e1;
+  border-color: #409EFF;
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
@@ -3396,7 +3424,7 @@ watch(showDataVisualization, (newValue) => {
 }
 
 .modal-form .type-btn.active {
-  background: #4299e1;
+  background: #409EFF;
   color: #ffffff;
 }
 
@@ -3564,12 +3592,12 @@ watch(showDataVisualization, (newValue) => {
 }
 
 .tab-btn:hover {
-  color: #4299e1;
+  color: #409EFF;
 }
 
 .tab-btn.active {
-  color: #4299e1;
-  border-bottom-color: #4299e1;
+  color: #409EFF;
+  border-bottom-color: #409EFF;
   background-color: rgba(66, 153, 225, 0.05);
 }
 
@@ -3623,7 +3651,7 @@ watch(showDataVisualization, (newValue) => {
 
 .form-select:focus {
   outline: none;
-  border-color: #4299e1;
+  border-color: #409EFF;
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
@@ -3641,7 +3669,7 @@ watch(showDataVisualization, (newValue) => {
 }
 
 .file-upload-container:hover {
-  border-color: #4299e1;
+  border-color: #409EFF;
   background-color: rgba(66, 153, 225, 0.05);
 }
 
@@ -3698,7 +3726,7 @@ watch(showDataVisualization, (newValue) => {
 }
 
 .form-actions .btn-primary {
-  background-color: #4299e1;
+  background-color: #409EFF;
   border: none;
   color: white;
 }
@@ -3802,13 +3830,13 @@ watch(showDataVisualization, (newValue) => {
 }
 
 .page-number:hover {
-  border-color: #4299e1;
-  color: #4299e1;
+  border-color: #409EFF;
+  color: #409EFF;
 }
 
 .page-number.active {
-  background-color: #4299e1;
-  border-color: #4299e1;
+  background-color: #409EFF;
+  border-color: #409EFF;
   color: white;
   font-weight: 500;
 }
@@ -3834,7 +3862,7 @@ watch(showDataVisualization, (newValue) => {
 
 .page-size-select:focus {
   outline: none;
-  border-color: #4299e1;
+  border-color: #409EFF;
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
@@ -3923,11 +3951,11 @@ watch(showDataVisualization, (newValue) => {
 }
 
 .year-selector :deep(.el-input__wrapper:hover) {
-  border-color: #4299e1;
+  border-color: #409EFF;
 }
 
 .year-selector :deep(.el-input__wrapper.is-focus) {
-  border-color: #4299e1;
+  border-color: #409EFF;
   box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.2);
 }
 
@@ -3985,11 +4013,11 @@ watch(showDataVisualization, (newValue) => {
 }
 
 .heatmap-controls :deep(.el-input__wrapper:hover) {
-  border-color: #4299e1;
+  border-color: #409EFF;
 }
 
 .heatmap-controls :deep(.el-input__wrapper.is-focus) {
-  border-color: #4299e1;
+  border-color: #409EFF;
   box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.2);
 }
 
