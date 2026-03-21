@@ -104,7 +104,7 @@
           </div>
           <div class="filter-item">
             <label>项目</label>
-            <el-select v-model="filterProjectId" placeholder="全部项目" clearable class="filter-select" @change="handleFilterChange">
+            <el-select v-model="filterProjectId" placeholder="全部项目" clearable filterable class="filter-select" @change="handleFilterChange">
               <el-option v-for="project in projects" :key="project.id" :label="project.projectName" :value="project.id"></el-option>
             </el-select>
           </div>
@@ -203,7 +203,7 @@
             
             <div class="form-group">
               <label>项目</label>
-              <el-select v-model="performanceForm.projectId" @change="onProjectChange" placeholder="请选择项目" required class="full-width">
+              <el-select v-model="performanceForm.projectId" @change="onProjectChange" placeholder="请选择项目" required class="full-width" filterable clearable>
                 <el-option v-for="project in projects" :key="project.id" :label="project.projectName" :value="project.id"></el-option>
               </el-select>
             </div>
@@ -441,7 +441,7 @@
             
             <div class="form-group">
               <label>项目</label>
-              <el-select v-model="overtimeForm.projectId" placeholder="请选择项目" required class="full-width">
+              <el-select v-model="overtimeForm.projectId" placeholder="请选择项目" required class="full-width" filterable clearable>
                 <el-option v-for="project in projects" :key="project.id" :label="project.projectName" :value="project.id"></el-option>
               </el-select>
             </div>
@@ -497,7 +497,7 @@
               <tr v-for="salary in paginatedSalaries" :key="salary.id">
                 <td><input type="checkbox" v-model="selectedSalaries" :value="salary.id"></td>
                 <td>{{ salary.month }}</td>
-                <td>{{ salary.attendanceDays }}</td>
+                <td>{{ Number(salary.attendanceDays).toFixed(2) }}</td>
                 <td>{{ formatMoney(salary.basicSalary) }}</td>
                 <td>{{ formatMoney(salary.performanceSalary) }}</td>
                 <td>{{ formatMoney(salary.overtimeSalary) }}</td>
@@ -516,10 +516,15 @@
           </table>
         </div>
         
-        <div class="pagination" v-if="salaries.length > 0">
-          <button class="btn btn-sm" :disabled="salaryCurrentPage === 1" @click="salaryCurrentPage--">上一页</button>
-          <span>第 {{ salaryCurrentPage }} / {{ salaryTotalPages }} 页</span>
-          <button class="btn btn-sm" :disabled="salaryCurrentPage === salaryTotalPages" @click="salaryCurrentPage++">下一页</button>
+        <div class="pagination-container" v-if="salaries.length > 0">
+          <div class="pagination-info">共 {{ salaries.length }} 条记录</div>
+          <div class="pagination-controls">
+            <button class="page-btn" :class="{ disabled: salaryCurrentPage === 1 }" @click="salaryCurrentPage > 1 && salaryCurrentPage--">上一页</button>
+            <div class="page-numbers">
+              <button v-for="page in visibleSalaryPages" :key="page" class="page-number" :class="{ active: page === salaryCurrentPage }" @click="salaryCurrentPage = page">{{ page }}</button>
+            </div>
+            <button class="page-btn" :class="{ disabled: salaryCurrentPage >= salaryTotalPages }" @click="salaryCurrentPage < salaryTotalPages && salaryCurrentPage++">下一页</button>
+          </div>
         </div>
       </div>
     </div>
@@ -555,8 +560,8 @@
               <el-input-number
                 v-model="salaryForm.attendanceDays"
                 :min="0"
-                :step="0.5"
-                :precision="1"
+                :step="0.01"
+                :precision="2"
                 placeholder="自动计算"
                 style="width: 100%"
                 disabled
@@ -595,8 +600,8 @@
               <el-input-number
                 v-model="salaryForm.basicSalary"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="基本薪资"
                 style="width: 100%"
               />
@@ -606,7 +611,7 @@
               <el-input-number
                 v-model="salaryForm.performanceCoefficient"
                 :min="0"
-                :step="0.1"
+                :step="0.00001"
                 :precision="5"
                 placeholder="自动计算"
                 style="width: 100%"
@@ -621,8 +626,8 @@
               <el-input-number
                 v-model="salaryForm.performanceSalary"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="自动计算"
                 style="width: 100%"
                 disabled
@@ -633,8 +638,8 @@
               <el-input-number
                 v-model="salaryForm.positionPerformance"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="岗位绩效"
                 style="width: 100%"
               />
@@ -647,8 +652,8 @@
               <el-input-number
                 v-model="salaryForm.mealAllowance"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="餐补"
                 style="width: 100%"
               />
@@ -658,8 +663,8 @@
               <el-input-number
                 v-model="salaryForm.housingAllowance"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="房补"
                 style="width: 100%"
               />
@@ -672,8 +677,8 @@
               <el-input-number
                 v-model="salaryForm.fullAttendanceBonus"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="全勤奖"
                 style="width: 100%"
               />
@@ -683,8 +688,8 @@
               <el-input-number
                 v-model="salaryForm.otherBonus"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="其他奖金"
                 style="width: 100%"
               />
@@ -697,8 +702,8 @@
               <el-input-number
                 v-model="salaryForm.overtimeHours"
                 :min="0"
-                :step="0.5"
-                :precision="1"
+                :step="0.01"
+                :precision="2"
                 placeholder="自动计算"
                 style="width: 100%"
                 disabled
@@ -709,8 +714,8 @@
               <el-input-number
                 v-model="salaryForm.overtimeSalary"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="自动计算"
                 style="width: 100%"
                 disabled
@@ -724,8 +729,8 @@
               <el-input-number
                 v-model="salaryForm.pensionInsurance"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="养老保险"
                 style="width: 100%"
               />
@@ -735,8 +740,8 @@
               <el-input-number
                 v-model="salaryForm.medicalInsurance"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="医疗保险"
                 style="width: 100%"
               />
@@ -749,8 +754,8 @@
               <el-input-number
                 v-model="salaryForm.unemploymentInsurance"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="失业保险"
                 style="width: 100%"
               />
@@ -760,8 +765,8 @@
               <el-input-number
                 v-model="salaryForm.lateDeduction"
                 :min="0"
-                :step="10"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="迟到扣款"
                 style="width: 100%"
               />
@@ -808,8 +813,8 @@
               <el-input-number
                 v-model="tempSalaryConfig.basicSalary"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="基本薪资"
                 style="width: 100%"
               />
@@ -819,8 +824,8 @@
               <el-input-number
                 v-model="tempSalaryConfig.positionPerformance"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="岗位绩效"
                 style="width: 100%"
               />
@@ -833,8 +838,8 @@
               <el-input-number
                 v-model="tempSalaryConfig.mealAllowance"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="餐补"
                 style="width: 100%"
               />
@@ -844,8 +849,8 @@
               <el-input-number
                 v-model="tempSalaryConfig.housingAllowance"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="房补"
                 style="width: 100%"
               />
@@ -858,8 +863,8 @@
               <el-input-number
                 v-model="tempSalaryConfig.fullAttendanceBonus"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="全勤奖"
                 style="width: 100%"
               />
@@ -869,8 +874,8 @@
               <el-input-number
                 v-model="tempSalaryConfig.otherBonus"
                 :min="0"
-                :step="100"
-                :precision="2"
+                :step="0.01"
+                :precision="5"
                 placeholder="其他奖金"
                 style="width: 100%"
               />
@@ -884,7 +889,7 @@
                 v-model="tempSalaryConfig.pensionInsurance"
                 :min="0"
                 :step="0.01"
-                :precision="2"
+                :precision="5"
                 placeholder="养老保险"
                 style="width: 100%"
               />
@@ -895,7 +900,7 @@
                 v-model="tempSalaryConfig.medicalInsurance"
                 :min="0"
                 :step="0.01"
-                :precision="2"
+                :precision="5"
                 placeholder="医疗保险"
                 style="width: 100%"
               />
@@ -909,7 +914,7 @@
                 v-model="tempSalaryConfig.unemploymentInsurance"
                 :min="0"
                 :step="0.01"
-                :precision="2"
+                :precision="5"
                 placeholder="失业保险"
                 style="width: 100%"
               />
@@ -920,7 +925,7 @@
                 v-model="tempSalaryConfig.lateDeduction"
                 :min="0"
                 :step="0.01"
-                :precision="2"
+                :precision="5"
                 placeholder="迟到扣款"
                 style="width: 100%"
               />
@@ -1285,6 +1290,14 @@ const totalOvertimeHours = computed(() => {
 });
 
 const salaryTotalPages = computed(() => Math.ceil(salaries.value.length / salaryPageSize) || 1);
+
+const visibleSalaryPages = computed(() => {
+  const pages = [];
+  const start = Math.max(1, salaryCurrentPage.value - 2);
+  const end = Math.min(salaryTotalPages.value, salaryCurrentPage.value + 2);
+  for (let i = start; i <= end; i++) pages.push(i);
+  return pages;
+});
 
 const paginatedSalaries = computed(() => {
   const start = (salaryCurrentPage.value - 1) * salaryPageSize;

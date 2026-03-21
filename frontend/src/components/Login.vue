@@ -61,7 +61,7 @@
             <button 
               type="button" 
               class="switch-button" 
-              @click="$emit('switchToRegister')"
+              @click="router.push('/register')"
             >
               立即注册
             </button>
@@ -168,8 +168,10 @@
 
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 
+const router = useRouter();
 const emit = defineEmits(['switchToRegister', 'loginSuccess']);
 
 const username = ref('');
@@ -204,6 +206,7 @@ const handleLogin = async () => {
       localStorage.setItem('user', JSON.stringify(data.user));
       ElMessage.success('登录成功');
       emit('loginSuccess');
+      router.push('/financial-ledger');
     } else {
       ElMessage.error(data.message || '登录失败，请检查用户名和密码');
     }

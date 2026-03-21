@@ -69,7 +69,7 @@
             <button 
               type="button" 
               class="switch-button" 
-              @click="$emit('switchToLogin')"
+              @click="router.push('/login')"
             >
               立即登录
             </button>
@@ -82,9 +82,10 @@
 
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 
-const emit = defineEmits(['switchToLogin']);
+const router = useRouter();
 
 const username = ref('');
 const email = ref('');
@@ -112,7 +113,7 @@ const handleRegister = async () => {
     if (response.ok) {
       ElMessage.success(data.message || '注册成功，正在跳转到登录页面...');
       setTimeout(() => {
-        emit('switchToLogin');
+        router.push('/login');
       }, 2000);
     } else {
       ElMessage.error(data.message || '注册失败，请检查输入信息');

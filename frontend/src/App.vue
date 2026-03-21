@@ -1,135 +1,86 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-import Login from './components/Login.vue';
-import Register from './components/Register.vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import UserProfileEdit from './components/UserProfileEdit.vue';
 import { ElConfigProvider } from 'element-plus';
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs';
 
 const router = useRouter();
+const route = useRoute();
 
-// 登录状态管理
 const isLoggedIn = ref(false);
-const currentView = ref('login'); // 'login' or 'register'
 
-// 用户信息
 const userInfo = ref({
   username: '用户名',
   avatar: '',
   nickname: '未命名'
 });
 
-// 导航栏展开状态管理
 const expandedMenus = ref({
-  dataControl: true // 默认展开数据总控台
+  dataControl: true
 });
 
-// 侧边栏显示状态
 const sidebarVisible = ref(true);
-
-// 用户菜单展开状态
 const showUserMenu = ref(false);
-
-// 用户信息修改弹窗
 const showUserProfileEdit = ref(false);
 
-// 切换侧边栏显示状态
 const toggleSidebar = () => {
   sidebarVisible.value = !sidebarVisible.value;
 };
 
-// 切换用户菜单展开状态
 const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value;
 };
 
-// 切换菜单展开状态
 const toggleMenu = (menuKey) => {
   expandedMenus.value[menuKey] = !expandedMenus.value[menuKey];
 };
 
-// 退出登录
 const logout = () => {
   isLoggedIn.value = false;
-  currentView.value = 'login';
-  // 清除localStorage中的用户信息
   localStorage.removeItem('user');
-  // 重置用户信息
   userInfo.value = {
     username: '用户名',
-    avatar: 'https://neeko-copilot.bytedance.net/api/text2image?prompt=user%20avatar%20portrait&size=32x32',
+    avatar: '',
     nickname: '未命名'
   };
-  // 重置路由到根路径
   router.push('/');
 };
 
-// 处理登录成功
-const handleLoginSuccess = () => {
-  isLoggedIn.value = true;
-  const savedUser = localStorage.getItem('user');
-  if (savedUser) {
-    userInfo.value = JSON.parse(savedUser);
-  }
-  router.push('/financial-ledger');
-};
-
-// 获取头像URL
 const getAvatarUrl = (avatar) => {
   if (!avatar) {
     return 'http://localhost:8080/default-avatar.svg';
   }
-  // 检查是否已经是完整的URL
   if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
     return avatar;
   }
-  // 默认头像从静态资源目录获取
   if (avatar === 'default-avatar.svg' || avatar === 'default-avatar.png') {
     return 'http://localhost:8080/' + avatar;
   }
-  // 处理本地文件路径
   if (avatar.includes('\\') || avatar.includes('/')) {
-    // 提取Usersimg部分
     const usersimgIndex = avatar.indexOf('Usersimg');
     if (usersimgIndex !== -1) {
       const relativePath = avatar.substring(usersimgIndex);
       return 'http://localhost:8080/' + relativePath.replace(/\\/g, '/');
     }
   }
-  // 如果只是文件名，添加Usersimg路径
   return 'http://localhost:8080/Usersimg/' + avatar;
 };
 
-// 切换到注册页面
-const switchToRegister = () => {
-  currentView.value = 'register';
-};
-
-// 切换到登录页面
-const switchToLogin = () => {
-  currentView.value = 'login';
-};
-
-// 打开用户信息修改弹窗
 const openUserProfileEdit = () => {
   showUserProfileEdit.value = true;
-  showUserMenu.value = false; // 关闭用户菜单
+  showUserMenu.value = false;
 };
 
-// 关闭用户信息修改弹窗
 const closeUserProfileEdit = () => {
   showUserProfileEdit.value = false;
 };
 
-// 更新用户信息
 const updateUserInfo = (updatedUser) => {
   userInfo.value = updatedUser;
-  // 更新localStorage中的用户信息
   localStorage.setItem('user', JSON.stringify(updatedUser));
 };
 
-// 点击外部关闭用户菜单
 const handleClickOutside = (event) => {
   const userProfile = event.target.closest('.user-profile');
   if (!userProfile) {
@@ -137,14 +88,30 @@ const handleClickOutside = (event) => {
   }
 };
 
-// 生命周期钩子
-onMounted(() => {
-  // 页面加载时检查localStorage中的用户信息
+const checkAuth = () => {
   const savedUser = localStorage.getItem('user');
   if (savedUser) {
     isLoggedIn.value = true;
     userInfo.value = JSON.parse(savedUser);
+  } else {
+    isLoggedIn.value = false;
   }
+};
+
+const isPublicPage = () => {
+  return route.meta.public === true;
+};
+
+const isAuthPage = () => {
+  return route.path === '/login' || route.path === '/register';
+};
+
+watch(() => route.path, () => {
+  checkAuth();
+});
+
+onMounted(() => {
+  checkAuth();
   document.addEventListener('click', handleClickOutside);
 });
 
@@ -155,90 +122,78 @@ onUnmounted(() => {
 
 <template>
   <el-config-provider :locale="zhCn">
-    <div v-if="!isLoggedIn" class="auth-container">
-      <Login 
-        v-if="currentView === 'login'" 
-        @switchToRegister="switchToRegister"
-        @loginSuccess="handleLoginSuccess"
-      />
-      <Register 
-        v-else 
-        @switchToLogin="switchToLogin"
-      />
+    <!-- 公开页面（介绍页、登录、注册） -->
+    <div v-if="isPublicPage()" class="public-page" :class="{ 'auth-page': isAuthPage() }">
+      <div v-if="isAuthPage()" class="auth-background"></div>
+      <router-view />
     </div>
-    <div v-else class="app-container" :class="{ 'sidebar-hidden': !sidebarVisible }">
-    <!-- 左侧导航栏 -->
-    <aside class="sidebar">
-      <header class="sidebar-header">
-        <img src="/time-bottle.png" alt="拾光瓶" class="logo">
-        <h1>拾光瓶</h1>
-      </header>
-      <nav class="nav-menu">
-        <ul>
-          <li class="nav-item">
-            <div class="nav-item-title" @click="toggleMenu('dataControl')">
-              <span class="menu-icon">📊</span>
-              <span>数据总控台</span>
-              <span class="expand-icon">{{ expandedMenus.dataControl ? '▼' : '▶' }}</span>
-            </div>
-            <Transition name="sub-menu">
-              <ul v-if="expandedMenus.dataControl" class="sub-menu">
-                <li><router-link to="/financial-ledger"><span class="menu-icon">💰</span>财务台账</router-link></li>
-                <li><router-link to="/performance-record"><span class="menu-icon">📈</span>绩效记录</router-link></li>
-                <li><router-link to="/performance-dashboard"><span class="menu-icon">📋</span>绩效看板</router-link></li>
-              </ul>
-            </Transition>
-          </li>
-        </ul>
-      </nav>
-    </aside>
+    
+    <div v-else-if="isLoggedIn" class="app-container" :class="{ 'sidebar-hidden': !sidebarVisible }">
+      <aside class="sidebar">
+        <header class="sidebar-header">
+          <img src="/time-bottle.png" alt="拾光瓶" class="logo">
+          <h1>拾光瓶</h1>
+        </header>
+        <nav class="nav-menu">
+          <ul>
+            <li class="nav-item">
+              <div class="nav-item-title" @click="toggleMenu('dataControl')">
+                <span class="menu-icon">📊</span>
+                <span>数据总控台</span>
+                <span class="expand-icon">{{ expandedMenus.dataControl ? '▼' : '▶' }}</span>
+              </div>
+              <Transition name="sub-menu">
+                <ul v-if="expandedMenus.dataControl" class="sub-menu">
+                  <li><router-link to="/financial-ledger"><span class="menu-icon">💰</span>财务台账</router-link></li>
+                  <li><router-link to="/performance-record"><span class="menu-icon">📈</span>绩效记录</router-link></li>
+                  <li><router-link to="/performance-dashboard"><span class="menu-icon">📋</span>绩效看板</router-link></li>
+                </ul>
+              </Transition>
+            </li>
+          </ul>
+        </nav>
+      </aside>
 
-    <!-- 右侧内容区 -->
-    <main class="content">
-      <!-- 头部 -->
-      <header class="header">
-        <div class="header-title">
-          <button class="sidebar-toggle" @click="toggleSidebar" :title="sidebarVisible ? '隐藏侧边栏' : '显示侧边栏'">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <div class="user-info">
-          <div class="user-profile" @click="toggleUserMenu">
-            <img :src="getAvatarUrl(userInfo.avatar)" alt="用户头像" class="avatar">
-            <span class="username">{{ userInfo.nickname || userInfo.username }}</span>
-            <span class="dropdown-icon">▼</span>
-            <div v-if="showUserMenu" class="user-dropdown">
-              <a href="#" @click.stop="openUserProfileEdit">修改信息</a>
-              <a href="#" @click.prevent="logout">退出登录</a>
-            </div>
-            
-            <!-- 用户信息修改弹窗 -->
-            <UserProfileEdit 
-              v-if="showUserProfileEdit" 
-              :userInfo="userInfo"
-              @close="closeUserProfileEdit"
-              @update="updateUserInfo"
-            />
+      <main class="content">
+        <header class="header">
+          <div class="header-title">
+            <button class="sidebar-toggle" @click="toggleSidebar" :title="sidebarVisible ? '隐藏侧边栏' : '显示侧边栏'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
           </div>
-        </div>
-      </header>
+          <div class="user-info">
+            <div class="user-profile" @click="toggleUserMenu">
+              <img :src="getAvatarUrl(userInfo.avatar)" alt="用户头像" class="avatar">
+              <span class="username">{{ userInfo.nickname || userInfo.username }}</span>
+              <span class="dropdown-icon">▼</span>
+              <div v-if="showUserMenu" class="user-dropdown">
+                <a href="#" @click.stop="openUserProfileEdit">修改信息</a>
+                <a href="#" @click.prevent="logout">退出登录</a>
+              </div>
+              
+              <UserProfileEdit 
+                v-if="showUserProfileEdit" 
+                :userInfo="userInfo"
+                @close="closeUserProfileEdit"
+                @update="updateUserInfo"
+              />
+            </div>
+          </div>
+        </header>
 
-      <!-- 主内容 -->
-      <div class="main-content">
-        <!-- 这里将显示导航内容 -->
-        <router-view />
-      </div>
-    </main>
-  </div>
+        <div class="main-content">
+          <router-view />
+        </div>
+      </main>
+    </div>
   </el-config-provider>
 </template>
 
 <style scoped>
-/* 全局样式重置 */
 * {
   margin: 0;
   padding: 0;
@@ -253,28 +208,40 @@ body {
   background-color: #f5f7fa;
 }
 
-.auth-container {
+.public-page {
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
+}
+
+.auth-page {
+  position: relative;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-image: url('./src/assets/images/login-bg.png');
+}
+
+.auth-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('./assets/images/login-bg.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  position: relative;
+  z-index: 1;
 }
 
-.auth-container::before {
+.auth-background::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 1;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
 }
 
 .app-container {
@@ -288,7 +255,6 @@ body {
   position: relative;
 }
 
-/* 侧边导航栏 */
 .sidebar {
   position: absolute;
   left: 20px;
@@ -566,7 +532,6 @@ body {
   box-shadow: 0 2px 8px rgba(66, 153, 225, 0.12);
 }
 
-/* 右侧内容区 */
 .content {
   flex: 1;
   display: flex;
@@ -589,7 +554,6 @@ body {
   margin-left: 0;
 }
 
-/* 头部 */
 .header {
   height: 64px;
   background: rgba(255, 255, 255, 0.5);
@@ -721,7 +685,6 @@ body {
   color: #2d3748;
 }
 
-/* 主内容 */
 .main-content {
   flex: 1;
   padding: 30px;
@@ -733,7 +696,6 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-/* 页面模块通用基础样式 */
 .main-content > div {
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(8px);
@@ -766,74 +728,6 @@ body {
   border-bottom: 1px solid rgba(224, 230, 237, 0.5);
 }
 
-/* 按钮样式 */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  outline: none;
-  text-decoration: none;
-}
-
-.btn-primary {
-  background-color: #4299e1;
-  color: #ffffff;
-}
-
-.btn-primary:hover {
-  background-color: #3182ce;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(66, 153, 225, 0.3);
-}
-
-.btn-secondary {
-  background-color: #e2e8f0;
-  color: #4a5568;
-}
-
-.btn-secondary:hover {
-  background-color: #cbd5e0;
-}
-
-/* 表单样式 */
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #4a5568;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e0e6ed;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: all 0.2s ease;
-  outline: none;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  border-color: #4299e1;
-  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-}
-
-/* 响应式设计 */
 @media (max-width: 768px) {
   .sidebar {
     width: 160px;
@@ -848,7 +742,6 @@ body {
   }
 }
 
-/* 动画效果 */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -864,7 +757,6 @@ body {
   animation: fadeIn 0.2s ease;
 }
 
-/* 隐藏滚动条但保留滚动功能 */
 .main-content {
   scrollbar-width: none;
   -ms-overflow-style: none;
