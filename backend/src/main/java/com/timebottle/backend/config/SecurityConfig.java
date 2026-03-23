@@ -49,6 +49,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/daily-performances/**").permitAll()
                 .requestMatchers("/api/overtime-records/**").permitAll()
                 .requestMatchers("/api/salary-records/**").permitAll()
+                .requestMatchers("/api/points/**").permitAll()
+                .requestMatchers("/api/password-reset/**").permitAll()
                 .requestMatchers("/Usersimg/**").permitAll()
                 .requestMatchers("/default-avatar.svg").permitAll()
                 .requestMatchers("/test.html").permitAll()

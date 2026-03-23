@@ -204,6 +204,9 @@ const handleLogin = async () => {
 
     if (response.ok) {
       localStorage.setItem('user', JSON.stringify(data.user));
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
       ElMessage.success('登录成功');
       emit('loginSuccess');
       router.push('/financial-ledger');

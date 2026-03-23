@@ -2,6 +2,7 @@ package com.timebottle.backend.controller;
 
 import com.timebottle.backend.entity.User;
 import com.timebottle.backend.service.UserService;
+import com.timebottle.backend.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +17,9 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
-    // 注册
+    @Autowired
+    private JwtUtil jwtUtil;
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Map<String, String> request) {
         try {
@@ -38,7 +41,6 @@ public class AuthController {
         }
     }
 
-    // 登录
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
         String username = request.get("username");
@@ -57,17 +59,21 @@ public class AuthController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        // 更新最后登录时间
         userService.updateLastLoginTime(user);
+
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername());
 
         Map<String, Object> response = new HashMap<>();
         response.put("message", "登录成功");
+        response.put("token", token);
+        
         Map<String, Object> userInfo = new HashMap<>();
         userInfo.put("id", user.getId());
         userInfo.put("username", user.getUsername());
         userInfo.put("avatar", user.getAvatar());
         userInfo.put("nickname", user.getNickname());
         userInfo.put("role", user.getRole());
+        userInfo.put("points", user.getPoints());
         response.put("user", userInfo);
 
         return ResponseEntity.ok(response);

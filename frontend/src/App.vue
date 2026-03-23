@@ -1,8 +1,8 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, provide } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import UserProfileEdit from './components/UserProfileEdit.vue';
-import { ElConfigProvider } from 'element-plus';
+import { ElConfigProvider, ElMessage } from 'element-plus';
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs';
 
 const router = useRouter();
@@ -13,11 +13,18 @@ const isLoggedIn = ref(false);
 const userInfo = ref({
   username: '用户名',
   avatar: '',
-  nickname: '未命名'
+  nickname: '未命名',
+  id: null
 });
 
+const userPoints = ref(0);
+const hasSignedIn = ref(false);
+const isSigningIn = ref(false);
+
 const expandedMenus = ref({
-  dataControl: true
+  dataControl: true,
+  dreamCardClub: true,
+  adminPanel: false
 });
 
 const sidebarVisible = ref(true);
@@ -39,11 +46,15 @@ const toggleMenu = (menuKey) => {
 const logout = () => {
   isLoggedIn.value = false;
   localStorage.removeItem('user');
+  localStorage.removeItem('token');
   userInfo.value = {
     username: '用户名',
     avatar: '',
-    nickname: '未命名'
+    nickname: '未命名',
+    id: null
   };
+  userPoints.value = 0;
+  hasSignedIn.value = false;
   router.push('/');
 };
 
@@ -93,8 +104,72 @@ const checkAuth = () => {
   if (savedUser) {
     isLoggedIn.value = true;
     userInfo.value = JSON.parse(savedUser);
+    if (userInfo.value.id) {
+      fetchPointsStatus();
+    }
   } else {
     isLoggedIn.value = false;
+  }
+};
+
+const fetchPointsStatus = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  
+  try {
+    const response = await fetch('/api/points/status', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (response.ok) {
+      const data = await response.json();
+      userPoints.value = data.points || 0;
+      hasSignedIn.value = data.hasSignedIn || false;
+    }
+  } catch (error) {
+    console.error('获取积分状态失败:', error);
+  }
+};
+
+const refreshPoints = () => {
+  fetchPointsStatus();
+};
+
+provide('refreshPoints', refreshPoints);
+
+const handleSignIn = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  
+  if (hasSignedIn.value) {
+    ElMessage.warning('今日已签到，请明天再来！');
+    return;
+  }
+  
+  isSigningIn.value = true;
+  try {
+    const response = await fetch('/api/points/sign-in', {
+      method: 'POST',
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    const data = await response.json();
+    if (data.success) {
+      userPoints.value = data.points;
+      hasSignedIn.value = true;
+      ElMessage.success(data.message);
+    } else {
+      ElMessage.warning(data.message);
+      if (data.message === '今日已签到，请明天再来！') {
+        hasSignedIn.value = true;
+      }
+    }
+  } catch (error) {
+    console.error('签到失败:', error);
+    ElMessage.error('签到失败，请稍后重试');
+  } finally {
+    isSigningIn.value = false;
   }
 };
 
@@ -150,6 +225,35 @@ onUnmounted(() => {
                 </ul>
               </Transition>
             </li>
+            <li class="nav-item">
+              <div class="nav-item-title" @click="toggleMenu('dreamCardClub')">
+                <span class="menu-icon">🎴</span>
+                <span>梦幻集卡社</span>
+                <span class="expand-icon">{{ expandedMenus.dreamCardClub ? '▼' : '▶' }}</span>
+              </div>
+              <Transition name="sub-menu">
+                <ul v-if="expandedMenus.dreamCardClub" class="sub-menu">
+                  <li><router-link to="/my-album"><span class="menu-icon">📚</span>我的图鉴</router-link></li>
+                  <li><router-link to="/points-exam"><span class="menu-icon">📝</span>积分考试</router-link></li>
+                  <li><router-link to="/points-mall"><span class="menu-icon">🛒</span>积分商城</router-link></li>
+                  <li><router-link to="/draw-card"><span class="menu-icon">🎰</span>抽取卡片</router-link></li>
+                </ul>
+              </Transition>
+            </li>
+            <li class="nav-item">
+              <div class="nav-item-title" @click="toggleMenu('adminPanel')">
+                <span class="menu-icon">⚙️</span>
+                <span>管理员后台</span>
+                <span class="expand-icon">{{ expandedMenus.adminPanel ? '▼' : '▶' }}</span>
+              </div>
+              <Transition name="sub-menu">
+                <ul v-if="expandedMenus.adminPanel" class="sub-menu">
+                  <li><router-link to="/admin-users"><span class="menu-icon">👥</span>用户管理</router-link></li>
+                  <li><router-link to="/admin-cards"><span class="menu-icon">🃏</span>集卡管理</router-link></li>
+                  <li><router-link to="/admin-feedback"><span class="menu-icon">💬</span>反馈管理</router-link></li>
+                </ul>
+              </Transition>
+            </li>
           </ul>
         </nav>
       </aside>
@@ -171,6 +275,13 @@ onUnmounted(() => {
               <span class="username">{{ userInfo.nickname || userInfo.username }}</span>
               <span class="dropdown-icon">▼</span>
               <div v-if="showUserMenu" class="user-dropdown">
+                <div class="points-display">
+                  <span class="points-label">当前积分</span>
+                  <span class="points-value">{{ userPoints }}</span>
+                </div>
+                <a href="#" @click.stop.prevent="handleSignIn" :class="{ 'signed-in': hasSignedIn }">
+                  {{ hasSignedIn ? '✓ 已签到' : '📅 签到领积分' }}
+                </a>
                 <a href="#" @click.stop="openUserProfileEdit">修改信息</a>
                 <a href="#" @click.prevent="logout">退出登录</a>
               </div>
@@ -678,11 +789,43 @@ body {
   color: #4a5568;
   font-size: 14px;
   transition: background-color 0.2s ease;
+  cursor: pointer;
 }
 
 .user-dropdown a:hover {
   background-color: #f7fafc;
   color: #2d3748;
+}
+
+.user-dropdown .points-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
+  border-bottom: 1px solid #e0e6ed;
+}
+
+.user-dropdown .points-label {
+  font-size: 13px;
+  color: #718096;
+}
+
+.user-dropdown .points-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.user-dropdown a.signed-in {
+  color: #10b981;
+  cursor: default;
+  background-color: #f0fdf4;
+}
+
+.user-dropdown a.signed-in:hover {
+  background-color: #f0fdf4;
+  color: #10b981;
 }
 
 .main-content {

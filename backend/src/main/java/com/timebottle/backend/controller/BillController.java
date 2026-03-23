@@ -127,16 +127,45 @@ public class BillController {
     @PostMapping
     public ResponseEntity<?> createBill(@RequestBody Map<String, Object> request) {
         try {
-            Integer userId = (Integer) request.get("userId");
+            Integer userId = null;
+            Object userIdObj = request.get("userId");
+            if (userIdObj instanceof Number) {
+                userId = ((Number) userIdObj).intValue();
+            }
             if (userId == null || userId == 0) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("message", "用户ID不能为空");
                 return ResponseEntity.badRequest().body(response);
             }
-            Integer categoryId = (Integer) request.get("category_id");
-            Integer type = (Integer) request.get("type");
+            
+            Integer categoryId = null;
+            Object categoryIdObj = request.get("category_id");
+            if (categoryIdObj instanceof Number) {
+                categoryId = ((Number) categoryIdObj).intValue();
+            } else if (categoryIdObj instanceof String && !((String) categoryIdObj).isEmpty()) {
+                try {
+                    categoryId = Integer.parseInt((String) categoryIdObj);
+                } catch (NumberFormatException e) {
+                    // 忽略
+                }
+            }
+            
+            Integer type = null;
+            Object typeObj = request.get("type");
+            if (typeObj instanceof Number) {
+                type = ((Number) typeObj).intValue();
+            }
+            
             String account = (String) request.get("account");
-            BigDecimal amount = new BigDecimal(request.get("amount").toString());
+            
+            BigDecimal amount = null;
+            Object amountObj = request.get("amount");
+            if (amountObj instanceof Number) {
+                amount = new BigDecimal(amountObj.toString());
+            } else if (amountObj instanceof String) {
+                amount = new BigDecimal((String) amountObj);
+            }
+            
             LocalDate billDate = LocalDate.parse((String) request.get("bill_date"));
             
             LocalTime billTime = null;
@@ -164,10 +193,34 @@ public class BillController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateBill(@PathVariable @NonNull Long id, @RequestBody Map<String, Object> request) {
         try {
-            Integer categoryId = (Integer) request.get("category_id");
-            Integer type = (Integer) request.get("type");
+            Integer categoryId = null;
+            Object categoryIdObj = request.get("category_id");
+            if (categoryIdObj instanceof Number) {
+                categoryId = ((Number) categoryIdObj).intValue();
+            } else if (categoryIdObj instanceof String && !((String) categoryIdObj).isEmpty()) {
+                try {
+                    categoryId = Integer.parseInt((String) categoryIdObj);
+                } catch (NumberFormatException e) {
+                    // 忽略
+                }
+            }
+            
+            Integer type = null;
+            Object typeObj = request.get("type");
+            if (typeObj instanceof Number) {
+                type = ((Number) typeObj).intValue();
+            }
+            
             String account = (String) request.get("account");
-            BigDecimal amount = new BigDecimal(request.get("amount").toString());
+            
+            BigDecimal amount = null;
+            Object amountObj = request.get("amount");
+            if (amountObj instanceof Number) {
+                amount = new BigDecimal(amountObj.toString());
+            } else if (amountObj instanceof String) {
+                amount = new BigDecimal((String) amountObj);
+            }
+            
             LocalDate billDate = LocalDate.parse((String) request.get("bill_date"));
             
             LocalTime billTime = null;

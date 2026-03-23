@@ -5,6 +5,7 @@ import com.timebottle.backend.repository.BillRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,6 +18,9 @@ public class BillService {
     @Autowired
     private BillRepository billRepository;
 
+    @Autowired
+    private PointsService pointsService;
+
     public List<Bill> findByDate(Integer userId, LocalDate date) {
         return billRepository.findByUserIdAndBillDateAndIsDeleted(userId, date, "0");
     }
@@ -25,7 +29,8 @@ public class BillService {
         return billRepository.findByUserIdAndIsDeleted(userId, "0");
     }
 
-    public Bill create(Integer userId, Integer categoryId, Integer type, String account, BigDecimal amount, 
+    @Transactional
+    public Bill create(@NonNull Integer userId, Integer categoryId, Integer type, String account, BigDecimal amount, 
                       LocalDate billDate, LocalTime billTime, String remark) {
         Bill bill = new Bill();
         bill.setUserId(userId);
@@ -37,7 +42,11 @@ public class BillService {
         bill.setBillTime(billTime);
         bill.setRemark(remark);
         bill.setIsDeleted("0");
-        return billRepository.save(bill);
+        Bill savedBill = billRepository.save(bill);
+        
+        pointsService.addAccountingPoints(userId, "记账奖励 - " + (remark != null ? remark : "账单#" + savedBill.getId()));
+        
+        return savedBill;
     }
 
     public Bill update(@NonNull Long id, Integer categoryId, Integer type, String account, BigDecimal amount, 
@@ -55,11 +64,17 @@ public class BillService {
         return billRepository.save(bill);
     }
 
+    @Transactional
     public void delete(@NonNull Long id) {
         Bill bill = billRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("账单不存在"));
         
         bill.setIsDeleted("1");
         billRepository.save(bill);
+        
+        Integer userId = bill.getUserId();
+        if (userId != null) {
+            pointsService.deductAccountingPoints(userId, "删除账单扣减 - 账单#" + id);
+        }
     }
 }

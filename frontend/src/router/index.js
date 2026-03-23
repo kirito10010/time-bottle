@@ -5,6 +5,13 @@ import Register from '../components/Register.vue';
 import DataControlConsoleFinancialLedger from '../components/DataControlConsoleFinancialLedger.vue';
 import DataControlConsolePerformanceRecord from '../components/DataControlConsolePerformanceRecord.vue';
 import DataControlConsolePerformanceDashboard from '../components/DataControlConsolePerformanceDashboard.vue';
+import DreamCardClubMyAlbum from '../components/DreamCardClubMyAlbum.vue';
+import DreamCardClubPointsExam from '../components/DreamCardClubPointsExam.vue';
+import DreamCardClubPointsMall from '../components/DreamCardClubPointsMall.vue';
+import DreamCardClubDrawCard from '../components/DreamCardClubDrawCard.vue';
+import AdminPanelUsers from '../components/AdminPanelUsers.vue';
+import AdminPanelCards from '../components/AdminPanelCards.vue';
+import AdminPanelFeedback from '../components/AdminPanelFeedback.vue';
 
 const routes = [
   {
@@ -41,6 +48,48 @@ const routes = [
     path: '/performance-dashboard',
     name: 'PerformanceDashboard',
     component: DataControlConsolePerformanceDashboard,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/my-album',
+    name: 'MyAlbum',
+    component: DreamCardClubMyAlbum,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/points-exam',
+    name: 'PointsExam',
+    component: DreamCardClubPointsExam,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/points-mall',
+    name: 'PointsMall',
+    component: DreamCardClubPointsMall,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/draw-card',
+    name: 'DrawCard',
+    component: DreamCardClubDrawCard,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/admin-users',
+    name: 'AdminUsers',
+    component: AdminPanelUsers,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/admin-cards',
+    name: 'AdminCards',
+    component: AdminPanelCards,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/admin-feedback',
+    name: 'AdminFeedback',
+    component: AdminPanelFeedback,
     meta: { requiresAuth: true }
   }
 ];

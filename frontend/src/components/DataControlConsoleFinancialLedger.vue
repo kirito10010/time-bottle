@@ -681,6 +681,9 @@ import * as echarts from 'echarts';
 import { ElDatePicker, ElTimePicker, ElConfigProvider, ElMessageBox } from 'element-plus';
 import 'element-plus/dist/index.css';
 import zhCn from 'element-plus/es/locale/lang/zh-cn';
+import { inject } from 'vue';
+
+const refreshPoints = inject('refreshPoints', () => {});
 
 // 用户信息缓存
 let cachedUser = null;
@@ -1151,6 +1154,8 @@ const addBill = async () => {
       await updateChart();
       // 更新数据可视化图表
       await updateVisualizationChart();
+      // 刷新积分显示
+      refreshPoints();
     } else {
       const errorData = await response.json();
       alert(errorData.message || '添加账单失败');
@@ -1231,6 +1236,8 @@ const deleteBill = async (billId) => {
       await fetchBills();
       await updateChart();
       await updateVisualizationChart();
+      // 刷新积分显示
+      refreshPoints();
     } else {
       const errorData = await response.json();
       alert(errorData.message || '删除账单失败');
