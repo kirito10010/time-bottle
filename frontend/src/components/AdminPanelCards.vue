@@ -10,22 +10,29 @@
     
     <div v-if="activeTab === 'cards'" class="cards-section">
       <div class="section-header">
-        <h3>卡片列表</h3>
-        <button class="btn-add" @click="showAddCard = true">+ 添加卡片</button>
+        <h3>卡片列表 (共 {{ cards.length }} 张)</h3>
+        <button class="btn-add" @click="openAddModal">+ 添加卡片</button>
       </div>
       
-      <div class="cards-grid">
+      <div v-if="loading" class="loading">加载中...</div>
+      
+      <div v-else-if="cards.length === 0" class="empty-state">
+        <p>暂无卡片，点击上方按钮添加</p>
+      </div>
+      
+      <div v-else class="cards-grid">
         <div v-for="card in cards" :key="card.id" class="card-item">
-          <div class="card-preview" :class="card.rarity">
-            <span class="card-emoji">{{ card.emoji }}</span>
+          <div class="card-preview" :class="getRarityClass(card.type)">
+            <img v-if="card.imageUrl" :src="card.imageUrl" :alt="card.name" class="card-image">
+            <span v-else class="card-emoji">🎴</span>
           </div>
           <div class="card-details">
             <h4>{{ card.name }}</h4>
-            <p class="card-rarity" :class="card.rarity">{{ card.rarityText }}</p>
-            <p class="card-chance">抽取概率: {{ (card.chance * 100).toFixed(1) }}%</p>
+            <p class="card-rarity" :class="getRarityClass(card.type)">{{ card.type }}</p>
+            <p class="card-url">{{ truncateUrl(card.imageUrl) }}</p>
           </div>
           <div class="card-actions">
-            <button class="btn-edit" @click="editCard(card)">编辑</button>
+            <button class="btn-edit" @click="openEditModal(card)">编辑</button>
             <button class="btn-delete" @click="deleteCard(card)">删除</button>
           </div>
         </div>
@@ -53,25 +60,65 @@
         </div>
       </div>
     </div>
+    
+    <!-- 添加/编辑卡片弹窗 -->
+    <div v-if="showCardModal" class="modal-overlay" @click.self="closeCardModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>{{ isEditing ? '编辑卡片' : '添加卡片' }}</h3>
+          <button class="modal-close" @click="closeCardModal">&times;</button>
+        </div>
+        <form @submit.prevent="saveCard">
+          <div class="form-group">
+            <label>卡片名称 <span class="required">*</span></label>
+            <input type="text" v-model="cardForm.name" placeholder="请输入卡片名称" required>
+          </div>
+          <div class="form-group">
+            <label>卡片类型 <span class="required">*</span></label>
+            <input type="text" v-model="cardForm.type" placeholder="请输入卡片类型" required>
+          </div>
+          <div class="form-group">
+            <label>图片URL <span class="required">*</span></label>
+            <input type="url" v-model="cardForm.imageUrl" placeholder="请输入图片完整URL" required>
+            <p class="form-tip">支持外链图片地址，如: https://example.com/image.jpg</p>
+          </div>
+          <div class="image-preview" v-if="cardForm.imageUrl">
+            <p>图片预览:</p>
+            <img :src="cardForm.imageUrl" alt="预览" @error="imageLoadError = true">
+            <p v-if="imageLoadError" class="error-text">图片加载失败，请检查URL</p>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel" @click="closeCardModal">取消</button>
+            <button type="submit" class="btn-save" :disabled="saving">
+              {{ saving ? '保存中...' : '保存' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 const activeTab = ref('cards');
-const showAddCard = ref(false);
+const showCardModal = ref(false);
 const showAddPack = ref(false);
+const isEditing = ref(false);
+const loading = ref(false);
+const saving = ref(false);
+const imageLoadError = ref(false);
 
-const cards = ref([
-  { id: 1, name: '火焰龙', emoji: '🐉', rarity: 'legendary', rarityText: '传说', chance: 0.01 },
-  { id: 2, name: '冰霜凤凰', emoji: '🦅', rarity: 'legendary', rarityText: '传说', chance: 0.01 },
-  { id: 3, name: '雷霆狮', emoji: '🦁', rarity: 'epic', rarityText: '史诗', chance: 0.05 },
-  { id: 4, name: '暗影狼', emoji: '🐺', rarity: 'epic', rarityText: '史诗', chance: 0.05 },
-  { id: 5, name: '水晶鹿', emoji: '🦌', rarity: 'rare', rarityText: '稀有', chance: 0.15 },
-  { id: 6, name: '森林熊', emoji: '🐻', rarity: 'common', rarityText: '普通', chance: 0.29 },
-]);
+const cards = ref([]);
+const editingCardId = ref(null);
+
+const cardForm = ref({
+  name: '',
+  type: '',
+  imageUrl: ''
+});
 
 const packs = ref([
   { id: 1, name: '普通卡包', emoji: '📦', description: '包含3张随机普通卡片', price: 50 },
@@ -80,18 +127,124 @@ const packs = ref([
   { id: 4, name: '传说卡包', emoji: '👑', description: '包含1张传说卡片', price: 500 },
 ]);
 
-const editCard = (card) => {
-  ElMessage.info(`编辑卡片: ${card.name}`);
+const getRarityClass = (type) => {
+  const typeMap = {
+    'SSR': 'legendary',
+    'SR': 'epic',
+    'R': 'rare',
+    'N': 'common'
+  };
+  return typeMap[type] || 'common';
+};
+
+const truncateUrl = (url) => {
+  if (!url) return '';
+  if (url.length > 30) {
+    return url.substring(0, 30) + '...';
+  }
+  return url;
+};
+
+const fetchCards = async () => {
+  loading.value = true;
+  try {
+    const response = await fetch('http://localhost:8080/api/cards');
+    if (response.ok) {
+      cards.value = await response.json();
+    } else {
+      ElMessage.error('获取卡片列表失败');
+    }
+  } catch (error) {
+    console.error('获取卡片失败:', error);
+    ElMessage.error('网络错误，请稍后重试');
+  } finally {
+    loading.value = false;
+  }
+};
+
+const openAddModal = () => {
+  isEditing.value = false;
+  editingCardId.value = null;
+  cardForm.value = { name: '', type: '', imageUrl: '' };
+  imageLoadError.value = false;
+  showCardModal.value = true;
+};
+
+const openEditModal = (card) => {
+  isEditing.value = true;
+  editingCardId.value = card.id;
+  cardForm.value = {
+    name: card.name,
+    type: card.type,
+    imageUrl: card.imageUrl
+  };
+  imageLoadError.value = false;
+  showCardModal.value = true;
+};
+
+const closeCardModal = () => {
+  showCardModal.value = false;
+  cardForm.value = { name: '', type: '', imageUrl: '' };
+  editingCardId.value = null;
+  imageLoadError.value = false;
+};
+
+const saveCard = async () => {
+  if (!cardForm.value.name || !cardForm.value.type || !cardForm.value.imageUrl) {
+    ElMessage.warning('请填写所有必填项');
+    return;
+  }
+  
+  saving.value = true;
+  try {
+    const url = isEditing.value 
+      ? `http://localhost:8080/api/cards/${editingCardId.value}`
+      : 'http://localhost:8080/api/cards';
+    const method = isEditing.value ? 'PUT' : 'POST';
+    
+    const response = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cardForm.value)
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      ElMessage.success(isEditing.value ? '更新成功' : '添加成功');
+      closeCardModal();
+      fetchCards();
+    } else {
+      ElMessage.error(data.message || '操作失败');
+    }
+  } catch (error) {
+    console.error('保存卡片失败:', error);
+    ElMessage.error('网络错误，请稍后重试');
+  } finally {
+    saving.value = false;
+  }
 };
 
 const deleteCard = (card) => {
-  ElMessageBox.confirm(`确定要删除卡片 ${card.name} 吗？`, '确认删除', {
+  ElMessageBox.confirm(`确定要删除卡片 "${card.name}" 吗？`, '确认删除', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    cards.value = cards.value.filter(c => c.id !== card.id);
-    ElMessage.success('删除成功');
+  }).then(async () => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/cards/${card.id}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        ElMessage.success('删除成功');
+        fetchCards();
+      } else {
+        const data = await response.json();
+        ElMessage.error(data.message || '删除失败');
+      }
+    } catch (error) {
+      ElMessage.error('网络错误，请稍后重试');
+    }
   }).catch(() => {});
 };
 
@@ -100,7 +253,7 @@ const editPack = (pack) => {
 };
 
 const deletePack = (pack) => {
-  ElMessageBox.confirm(`确定要删除卡包 ${pack.name} 吗？`, '确认删除', {
+  ElMessageBox.confirm(`确定要删除卡包 "${pack.name}" 吗？`, '确认删除', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
@@ -109,6 +262,10 @@ const deletePack = (pack) => {
     ElMessage.success('删除成功');
   }).catch(() => {});
 };
+
+onMounted(() => {
+  fetchCards();
+});
 </script>
 
 <style scoped>
@@ -176,9 +333,15 @@ h2 {
   background: #059669;
 }
 
+.loading, .empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+}
+
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
 }
 
@@ -193,13 +356,14 @@ h2 {
 }
 
 .card-preview {
-  width: 60px;
-  height: 60px;
+  width: 70px;
+  height: 70px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .card-preview.legendary {
@@ -218,12 +382,19 @@ h2 {
   background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
 }
 
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .card-emoji {
-  font-size: 28px;
+  font-size: 32px;
 }
 
 .card-details {
   flex: 1;
+  min-width: 0;
 }
 
 .card-details h4 {
@@ -235,7 +406,7 @@ h2 {
 .card-rarity {
   font-size: 12px;
   font-weight: 500;
-  margin: 0 0 2px 0;
+  margin: 0 0 4px 0;
 }
 
 .card-rarity.legendary { color: #d97706; }
@@ -243,10 +414,11 @@ h2 {
 .card-rarity.rare { color: #2563eb; }
 .card-rarity.common { color: #6b7280; }
 
-.card-chance {
+.card-url {
   font-size: 11px;
   color: #94a3b8;
   margin: 0;
+  word-break: break-all;
 }
 
 .card-actions {
@@ -256,10 +428,10 @@ h2 {
 }
 
 .btn-edit, .btn-delete {
-  padding: 4px 10px;
+  padding: 6px 12px;
   border: none;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
 }
 
@@ -273,6 +445,146 @@ h2 {
   color: #dc2626;
 }
 
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #1a202c;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.modal-content form {
+  padding: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.required {
+  color: #dc2626;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.form-tip {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+.image-preview {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.image-preview p {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+}
+
+.error-text {
+  color: #dc2626 !important;
+  margin-top: 8px !important;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.btn-cancel, .btn-save {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.btn-save {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Packs Section */
 .packs-list {
   display: flex;
   flex-direction: column;
