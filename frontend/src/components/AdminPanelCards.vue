@@ -1,7 +1,8 @@
 <template>
   <div class="admin-cards-container">
-    <h2>集卡管理</h2>
-    <p class="description">管理卡片和卡包配置</p>
+    <div class="header-container">
+      <h2>集卡管理</h2>
+    </div>
     
     <div class="tabs">
       <button :class="{ active: activeTab === 'cards' }" @click="activeTab = 'cards'">卡片管理</button>
@@ -28,7 +29,8 @@
           </div>
           <div class="card-details">
             <h4>{{ card.name }}</h4>
-            <p class="card-rarity" :class="getRarityClass(card.type)">{{ card.type }}</p>
+            <p class="card-series">{{ card.seriesName }}</p>
+            <p class="card-rarity" :class="getRarityClass(card.rarityLevel)">{{ card.type }}</p>
             <p class="card-url">{{ truncateUrl(card.imageUrl) }}</p>
           </div>
           <div class="card-actions">
@@ -70,12 +72,26 @@
         </div>
         <form @submit.prevent="saveCard">
           <div class="form-group">
+            <label>系列名称 <span class="required">*</span></label>
+            <input type="text" v-model="cardForm.seriesName" placeholder="请输入系列名称" required>
+          </div>
+          <div class="form-group">
             <label>卡片名称 <span class="required">*</span></label>
             <input type="text" v-model="cardForm.name" placeholder="请输入卡片名称" required>
           </div>
           <div class="form-group">
             <label>卡片类型 <span class="required">*</span></label>
             <input type="text" v-model="cardForm.type" placeholder="请输入卡片类型" required>
+          </div>
+          <div class="form-group">
+            <label>稀有度级别 <span class="required">*</span></label>
+            <select v-model="cardForm.rarityLevel" required>
+              <option :value="1">1 - 普通 (40%)</option>
+              <option :value="2">2 - 稀有 (30%)</option>
+              <option :value="3">3 - 超稀有 (15%)</option>
+              <option :value="4">4 - 史诗 (10%)</option>
+              <option :value="5">5 - 传说 (5%)</option>
+            </select>
           </div>
           <div class="form-group">
             <label>图片URL <span class="required">*</span></label>
@@ -115,8 +131,10 @@ const cards = ref([]);
 const editingCardId = ref(null);
 
 const cardForm = ref({
+  seriesName: '',
   name: '',
   type: '',
+  rarityLevel: 3,
   imageUrl: ''
 });
 
@@ -127,14 +145,15 @@ const packs = ref([
   { id: 4, name: '传说卡包', emoji: '👑', description: '包含1张传说卡片', price: 500 },
 ]);
 
-const getRarityClass = (type) => {
-  const typeMap = {
-    'SSR': 'legendary',
-    'SR': 'epic',
-    'R': 'rare',
-    'N': 'common'
-  };
-  return typeMap[type] || 'common';
+const getRarityClass = (rarityLevel) => {
+  if (!rarityLevel) return 'common';
+  switch (rarityLevel) {
+    case 5: return 'legendary';
+    case 4: return 'epic';
+    case 3: return 'rare';
+    case 2: return 'uncommon';
+    default: return 'common';
+  }
 };
 
 const truncateUrl = (url) => {
@@ -174,8 +193,10 @@ const openEditModal = (card) => {
   isEditing.value = true;
   editingCardId.value = card.id;
   cardForm.value = {
+    seriesName: card.seriesName || '',
     name: card.name,
     type: card.type,
+    rarityLevel: card.rarityLevel || 3,
     imageUrl: card.imageUrl
   };
   imageLoadError.value = false;
@@ -190,7 +211,7 @@ const closeCardModal = () => {
 };
 
 const saveCard = async () => {
-  if (!cardForm.value.name || !cardForm.value.type || !cardForm.value.imageUrl) {
+  if (!cardForm.value.seriesName || !cardForm.value.name || !cardForm.value.type || !cardForm.value.rarityLevel || !cardForm.value.imageUrl) {
     ElMessage.warning('请填写所有必填项');
     return;
   }
@@ -273,14 +294,20 @@ onMounted(() => {
   padding: 20px;
 }
 
-h2 {
-  margin-bottom: 8px;
-  color: #1a202c;
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(224, 230, 237, 0.5);
 }
 
-.description {
-  color: #718096;
-  margin-bottom: 24px;
+.header-container h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0;
 }
 
 .tabs {

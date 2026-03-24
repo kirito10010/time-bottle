@@ -1,15 +1,17 @@
 # 拾光瓶 (Time Bottle)
 
-一个现代化的个人财务管理与绩效追踪系统，采用前后端分离架构。
+一个现代化的个人财务管理、绩效追踪与集卡游戏系统，采用前后端分离架构。
 
 ---
 
 ## 项目概述
 
-拾光瓶是一个综合性的个人管理平台，主要包含两大核心功能：
+拾光瓶是一个综合性的个人管理平台，主要包含四大核心功能：
 
 1. **财务台账** - 个人收支管理、账单记录、数据可视化
 2. **绩效管理** - 每日绩效记录、加班管理、薪资计算
+3. **梦幻集卡社** - 卡片收集、积分商城、抽卡游戏、积分考试
+4. **管理员后台** - 用户管理、集卡管理、反馈管理
 
 ---
 
@@ -22,6 +24,7 @@
 | Spring Data JPA | - | ORM框架 |
 | Spring Security | - | 安全框架（BCrypt密码加密） |
 | Spring Mail | - | 邮件服务 |
+| JWT (jjwt) | 0.12.3 | Token认证 |
 | MySQL | 8.x | 数据库 |
 | Lombok | - | 代码简化 |
 | Java | 21 | 编程语言 |
@@ -35,6 +38,7 @@
 | Element Plus | 2.13.2 | UI组件库 |
 | ECharts | 6.0.0 | 图表可视化 |
 | flatpickr | 4.6.13 | 日期选择器 |
+| xlsx | - | Excel解析 |
 
 ---
 
@@ -56,10 +60,24 @@ time-bottle/
 │   │   │   ├── MonthlySalaryRecordController.java # 薪资记录
 │   │   │   ├── OvertimeRecordController.java      # 加班记录
 │   │   │   ├── ProductionProjectConfigController.java # 项目配置
-│   │   │   └── PasswordResetController.java       # 密码重置
+│   │   │   ├── PasswordResetController.java       # 密码重置
+│   │   │   ├── PointsController.java              # 积分系统
+│   │   │   └── CardController.java                # 卡片系统
 │   │   ├── entity/                       # 实体层
+│   │   │   ├── User.java                 # 用户实体
+│   │   │   ├── Bill.java                 # 账单实体
+│   │   │   ├── Category.java             # 分类实体
+│   │   │   ├── PointsLog.java            # 积分流水实体
+│   │   │   ├── AnimeCard.java            # 卡片实体
+│   │   │   └── UserCard.java             # 用户卡片实体
 │   │   ├── repository/                   # 数据访问层
 │   │   ├── service/                      # 业务逻辑层
+│   │   │   ├── UserService.java          # 用户服务
+│   │   │   ├── BillService.java          # 账单服务
+│   │   │   ├── PointsService.java        # 积分服务
+│   │   │   └── CardService.java          # 卡片服务
+│   │   ├── util/                         # 工具类
+│   │   │   └── JwtUtil.java              # JWT工具类
 │   │   └── BackendApplication.java       # 启动类
 │   ├── src/main/resources/
 │   │   └── application.properties        # 应用配置
@@ -70,10 +88,18 @@ time-bottle/
 │   │   ├── components/                   # Vue组件
 │   │   │   ├── Login.vue                 # 登录组件
 │   │   │   ├── Register.vue              # 注册组件
+│   │   │   ├── Introduction.vue          # 项目介绍页
 │   │   │   ├── UserProfileEdit.vue       # 用户信息编辑
 │   │   │   ├── DataControlConsoleFinancialLedger.vue  # 财务台账
 │   │   │   ├── DataControlConsolePerformanceRecord.vue # 绩效记录
-│   │   │   └── DataControlConsolePerformanceDashboard.vue # 绩效看板
+│   │   │   ├── DataControlConsolePerformanceDashboard.vue # 绩效看板
+│   │   │   ├── DreamCardClubMyAlbum.vue  # 我的图鉴
+│   │   │   ├── DreamCardClubPointsExam.vue # 积分考试
+│   │   │   ├── DreamCardClubPointsMall.vue # 积分商城
+│   │   │   ├── DreamCardClubDrawCard.vue # 抽取卡片
+│   │   │   ├── AdminPanelUsers.vue       # 用户管理
+│   │   │   ├── AdminPanelCards.vue       # 集卡管理
+│   │   │   └── AdminPanelFeedback.vue    # 反馈管理
 │   │   ├── router/index.js               # 路由配置
 │   │   ├── App.vue                       # 根组件
 │   │   ├── main.js                       # 入口文件
@@ -88,12 +114,18 @@ time-bottle/
 
 ### 1. 用户认证模块
 - 用户注册（用户名、邮箱、密码）
-- 用户登录（BCrypt密码验证）
+- 用户登录（BCrypt密码验证，返回JWT Token）
 - 密码找回（邮箱验证码，有效期5分钟）
 - 用户信息修改（昵称、密码、头像上传）
 - 头像上传（最大2MB）
 
-### 2. 财务台账模块
+### 2. 积分系统模块
+- **签到奖励**：每日签到获得10积分
+- **记账奖励**：新增账单获得1积分，删除账单扣减1积分
+- **积分流水**：记录所有积分变动
+- **积分状态**：实时显示当前积分和签到状态
+
+### 3. 财务台账模块
 - **账单管理**：增删改查、批量删除
 - **多条件筛选**：日期、类型、分类、账户、金额范围、备注
 - **分类管理**：收入/支出分类，支持自定义分类
@@ -103,7 +135,7 @@ time-bottle/
   - 热力图：消费习惯分析
 - **数据导入导出**：CSV/Excel格式
 
-### 3. 绩效管理模块
+### 4. 绩效管理模块
 - **每日绩效记录**：记录工作量、绩效工时
 - **加班记录管理**：加班时长、项目关联
 - **月度薪资计算**：
@@ -113,14 +145,37 @@ time-bottle/
   - 加班薪资 = 加班时长 × 17元
 - **工资配置**：可自定义各项薪资参数，保存到浏览器
 
-### 4. 前端路由
+### 5. 梦幻集卡社模块
+- **我的图鉴**：展示用户收集的所有卡片，显示收集进度
+- **积分考试**：答题获取积分，每题正确获得2积分
+- **积分商城**：使用积分兑换卡包和道具
+- **抽取卡片**：
+  - 单抽：消耗10积分
+  - 十连抽：消耗90积分
+  - 随机从卡片池抽取，自动保存到用户图鉴
+
+### 6. 管理员后台模块
+- **用户管理**：查看、搜索、编辑用户，禁用/启用账户
+- **集卡管理**：管理卡片和卡包，支持添加、编辑、删除卡片
+- **反馈管理**：处理用户反馈和建议
+
+### 7. 前端路由
 
 | 路由 | 页面 | 说明 |
 |------|------|------|
-| `/` | 财务台账 | 首页，收支管理 |
+| `/` | 项目介绍 | 首页，项目介绍 |
+| `/login` | 登录 | 用户登录 |
+| `/register` | 注册 | 用户注册 |
 | `/financial-ledger` | 财务台账 | 收支管理主页面 |
 | `/performance-record` | 绩效记录 | 绩效数据录入 |
 | `/performance-dashboard` | 绩效看板 | 绩效数据展示 |
+| `/my-album` | 我的图鉴 | 卡片收集展示 |
+| `/points-exam` | 积分考试 | 答题获取积分 |
+| `/points-mall` | 积分商城 | 积分兑换道具 |
+| `/draw-card` | 抽取卡片 | 抽卡游戏 |
+| `/admin-users` | 用户管理 | 管理用户账户 |
+| `/admin-cards` | 集卡管理 | 管理卡片配置 |
+| `/admin-feedback` | 反馈管理 | 处理用户反馈 |
 
 ---
 
@@ -131,11 +186,33 @@ time-bottle/
 | 方法 | 路径 | 功能 |
 |------|------|------|
 | POST | `/register` | 用户注册 |
-| POST | `/login` | 用户登录 |
+| POST | `/login` | 用户登录（返回JWT Token） |
 | PUT | `/profile` | 修改用户信息（支持头像上传） |
 | POST | `/forgot-password` | 发送密码重置验证码 |
 | POST | `/verify-reset-code` | 验证重置验证码 |
 | POST | `/reset-password` | 重置密码 |
+
+### 积分接口 `/api/points`
+
+| 方法 | 路径 | 功能 |
+|------|------|------|
+| POST | `/sign-in` | 每日签到（+10积分） |
+| GET | `/status` | 获取签到状态和积分 |
+| GET | `/logs` | 获取积分流水 |
+| GET | `/balance` | 获取积分余额 |
+
+### 卡片接口 `/api/cards`
+
+| 方法 | 路径 | 功能 |
+|------|------|------|
+| GET | `/` | 获取所有卡片 |
+| GET | `/{id}` | 获取单个卡片 |
+| GET | `/type/{type}` | 按类型获取卡片 |
+| GET | `/user` | 获取用户拥有的卡片 |
+| POST | `/draw` | 抽卡（支持单抽和多抽） |
+| POST | `/` | 创建卡片（管理员） |
+| PUT | `/{id}` | 更新卡片（管理员） |
+| DELETE | `/{id}` | 删除卡片（管理员） |
 
 ### 账单接口 `/api/bills`
 
@@ -143,9 +220,9 @@ time-bottle/
 |------|------|------|
 | GET | `/` | 获取账单列表（支持多条件筛选） |
 | GET | `/all` | 获取所有账单 |
-| POST | `/` | 创建账单 |
+| POST | `/` | 创建账单（+1积分） |
 | PUT | `/{id}` | 更新账单 |
-| DELETE | `/{id}` | 删除账单 |
+| DELETE | `/{id}` | 删除账单（-1积分） |
 
 **筛选参数**: `date`, `type`, `categoryId`, `account`, `minAmount`, `maxAmount`, `remark`, `userId`, `page`, `pageSize`
 
@@ -218,6 +295,36 @@ time-bottle/
 | last_login_at | DATETIME | 最后登录时间 |
 | created_at | DATETIME | 创建时间 |
 | updated_at | DATETIME | 更新时间 |
+
+### 积分流水表 (points_log)
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | BIGINT UNSIGNED | 主键，自增 |
+| user_id | INT UNSIGNED | 用户ID |
+| change | INT | 积分变动值（正数为获得，负数为消耗） |
+| type | VARCHAR(20) | 变动类型：sign_in-签到，accounting-记账 |
+| remark | VARCHAR(255) | 备注 |
+| created_at | DATETIME | 记录时间 |
+
+### 卡片表 (anime_card)
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | BIGINT | 主键，自增 |
+| name | VARCHAR(100) | 卡片名称 |
+| type | VARCHAR(50) | 卡片类型（如：SSR、SR、R、N等） |
+| image_url | VARCHAR(500) | 卡片图片URL |
+| created_at | DATETIME | 创建时间 |
+| updated_at | DATETIME | 更新时间 |
+
+### 用户卡片表 (user_card)
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | BIGINT | 主键，自增 |
+| uid | BIGINT | 用户ID，关联users表 |
+| card_id | BIGINT | 卡片ID，关联anime_card表 |
+| obtained_at | DATETIME | 获得时间 |
+
+**唯一约束**: (uid, card_id) - 同一用户不能重复获得同一卡片
 
 ### 账单表 (bills)
 | 字段 | 类型 | 说明 |
@@ -394,6 +501,9 @@ app.upload.avatar-path=./uploads/avatars
 app.upload.max-size=2097152
 spring.servlet.multipart.max-file-size=2MB
 
+# JWT配置
+jwt.expiration=86400000
+
 # 邮件配置（用于密码找回）
 spring.mail.host=smtp.163.com
 spring.mail.port=465
@@ -421,31 +531,22 @@ export default defineConfig({
 
 ---
 
-## 项目特色
+## 核心业务逻辑
 
-1. **现代化技术栈**：Spring Boot 3 + Vue 3 + Java 21
-2. **前后端分离**：便于维护和扩展
-3. **精美UI设计**：毛玻璃效果、渐变色、动画过渡
-4. **数据可视化**：ECharts多图表类型
-5. **数据导入导出**：支持CSV/Excel格式
-6. **软删除机制**：数据可恢复
-7. **系统默认分类**：新用户开箱即用
-8. **邮件验证**：支持密码找回功能
-9. **工资配置持久化**：保存到浏览器localStorage
+### 积分系统
+| 操作 | 积分变动 | 说明 |
+|------|---------|------|
+| 每日签到 | +10 | 每天限一次 |
+| 新增账单 | +1 | 记账奖励 |
+| 删除账单 | -1 | 删除扣减 |
+| 单抽卡 | -10 | 抽卡消耗 |
+| 十连抽 | -90 | 抽卡消耗 |
 
----
-
-## 注意事项
-
-1. **密码加密**：使用BCrypt算法，不可逆
-2. **验证码有效期**：5分钟
-3. **头像大小限制**：最大2MB
-4. **软删除**：账单和分类使用软删除，数据不会真正删除
-5. **CORS配置**：开发环境允许所有来源，生产环境需要限制
-
----
-
-## 开发者备注
+### 抽卡系统
+1. 从 `anime_card` 表随机抽取卡片
+2. 抽到的卡片保存到 `user_card` 表
+3. 同一用户不会重复获得同一张卡片（UNIQUE约束）
+4. 卡片类型支持自定义（SSR、SR、R、N等）
 
 ### 薪资计算公式
 - 绩效总和 = 总绩效人天 - 考勤天数（底量扣除） - 加班小时数 × 0.125
@@ -456,6 +557,37 @@ export default defineConfig({
 ### 工资周期
 - 每月26日至次月25日为一个工资周期
 - 选择某月份时，自动计算该月份对应的工资周期
+
+---
+
+## 项目特色
+
+1. **现代化技术栈**：Spring Boot 3 + Vue 3 + Java 21
+2. **前后端分离**：便于维护和扩展
+3. **JWT认证**：无状态Token认证机制
+4. **精美UI设计**：毛玻璃效果、渐变色、动画过渡
+5. **数据可视化**：ECharts多图表类型
+6. **数据导入导出**：支持CSV/Excel格式
+7. **软删除机制**：数据可恢复
+8. **积分系统**：签到、记账奖励
+9. **集卡游戏**：抽卡、图鉴收集
+10. **邮件验证**：支持密码找回功能
+
+---
+
+## 注意事项
+
+1. **密码加密**：使用BCrypt算法，不可逆
+2. **JWT Token**：登录后返回Token，前端存储在localStorage
+3. **验证码有效期**：5分钟
+4. **头像大小限制**：最大2MB
+5. **软删除**：账单和分类使用软删除，数据不会真正删除
+6. **CORS配置**：已配置允许 localhost:5173 和 localhost:8080
+7. **积分扣减**：删除账单会扣减积分，积分最低为0
+
+---
+
+## 开发者备注
 
 ### 默认工资配置
 | 项目 | 默认值 |
@@ -470,6 +602,14 @@ export default defineConfig({
 | 医疗保险 | 90.08 |
 | 失业保险 | 13.51 |
 | 迟到扣款 | 0 |
+
+### 前端组件通信
+- 使用 `provide/inject` 实现跨组件通信
+- `refreshPoints` 方法在 App.vue 中 provide，子组件可 inject 调用刷新积分
+
+### 后端安全配置
+- SecurityConfig 已配置所有 `/api/**` 路径为 permitAll
+- CORS 配置允许指定来源的跨域请求
 
 ---
 

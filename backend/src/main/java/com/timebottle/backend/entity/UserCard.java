@@ -19,6 +19,9 @@ public class UserCard {
     @Column(name = "card_id", nullable = false)
     private Long cardId;
 
+    @Column(name = "quantity", nullable = false)
+    private Integer quantity = 1;
+
     @Column(name = "obtained_at", nullable = false)
     private LocalDateTime obtainedAt;
 
@@ -49,6 +52,14 @@ public class UserCard {
 
     public void setCardId(Long cardId) {
         this.cardId = cardId;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
 
     public LocalDateTime getObtainedAt() {

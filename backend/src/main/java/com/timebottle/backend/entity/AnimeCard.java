@@ -11,11 +11,17 @@ public class AnimeCard {
     @Column(name = "id")
     private Long id;
 
+    @Column(name = "series_name", nullable = false, length = 100)
+    private String seriesName;
+
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
     @Column(name = "type", nullable = false, length = 50)
     private String type;
+
+    @Column(name = "rarity_level", nullable = false)
+    private Integer rarityLevel;
 
     @Column(name = "image_url", nullable = false, length = 500)
     private String imageUrl;
@@ -45,6 +51,14 @@ public class AnimeCard {
         this.id = id;
     }
 
+    public String getSeriesName() {
+        return seriesName;
+    }
+
+    public void setSeriesName(String seriesName) {
+        this.seriesName = seriesName;
+    }
+
     public String getName() {
         return name;
     }
@@ -59,6 +73,14 @@ public class AnimeCard {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public Integer getRarityLevel() {
+        return rarityLevel;
+    }
+
+    public void setRarityLevel(Integer rarityLevel) {
+        this.rarityLevel = rarityLevel;
     }
 
     public String getImageUrl() {

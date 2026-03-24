@@ -1,7 +1,8 @@
 <template>
   <div class="points-exam-container">
-    <h2>积分考试</h2>
-    <p class="description">通过答题获取积分奖励</p>
+    <div class="header-container">
+      <h2>积分考试</h2>
+    </div>
     
     <div v-if="!examStarted" class="exam-intro">
       <div class="intro-card">
@@ -170,14 +171,20 @@ const resetExam = () => {
   padding: 20px;
 }
 
-h2 {
-  margin-bottom: 8px;
-  color: #1a202c;
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(224, 230, 237, 0.5);
 }
 
-.description {
-  color: #718096;
-  margin-bottom: 24px;
+.header-container h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0;
 }
 
 .exam-intro {
