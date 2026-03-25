@@ -2,6 +2,20 @@
   <div class="album-container">
     <div class="header-container">
       <h2>我的图鉴</h2>
+      <div class="filter-box">
+        <select v-model="selectedSeries" @change="filterCards">
+          <option value="">全部系列</option>
+          <option v-for="series in seriesList" :key="series" :value="series">{{ series }}</option>
+        </select>
+        <select v-model="selectedRarity" @change="filterCards">
+          <option value="">全部稀有度</option>
+          <option value="1">普通</option>
+          <option value="2">精良</option>
+          <option value="3">稀有</option>
+          <option value="4">史诗</option>
+          <option value="5">传说</option>
+        </select>
+      </div>
     </div>
     
     <div class="book-container">
@@ -49,9 +63,10 @@
                     </div>
                     <div class="photo-caption">
                       <div class="caption-decoration"></div>
-                      <span class="caption-series">{{ card.seriesName }}</span>
-                      <span class="caption-name">{{ card.name }}</span>
-                      <span class="caption-type" :class="getRarityClass(card.rarityLevel)">{{ card.type }}</span>
+                      <div class="caption-row">
+                        <span class="caption-name">{{ card.name }}</span>
+                        <span class="caption-type" :class="getRarityClass(card.rarityLevel)">{{ card.type }}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -105,7 +120,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 
+const allCards = ref([]);
 const cards = ref([]);
+const seriesList = ref([]);
+const selectedSeries = ref('');
+const selectedRarity = ref('');
 const totalCards = ref(0);
 const ownedCards = ref(0);
 const completionRate = ref(0);
@@ -144,6 +163,33 @@ const nextPage = () => {
   }
 };
 
+const filterCards = () => {
+  let filtered = [...allCards.value];
+  
+  if (selectedSeries.value) {
+    filtered = filtered.filter(card => card.seriesName === selectedSeries.value);
+  }
+  
+  if (selectedRarity.value) {
+    filtered = filtered.filter(card => card.rarityLevel === parseInt(selectedRarity.value));
+  }
+  
+  cards.value = filtered;
+  
+  cards.value.sort((a, b) => {
+    const seriesCompare = (a.seriesName || '').localeCompare(b.seriesName || '');
+    if (seriesCompare !== 0) return seriesCompare;
+    return (a.rarityLevel || 1) - (b.rarityLevel || 1);
+  });
+  
+  currentPage.value = 0;
+  
+  const owned = cards.value.filter(c => c.owned).length;
+  ownedCards.value = owned;
+  totalCards.value = cards.value.length;
+  completionRate.value = totalCards.value > 0 ? Math.round((owned / totalCards.value) * 100) : 0;
+};
+
 const fetchAlbumData = async () => {
   const token = localStorage.getItem('token');
   
@@ -156,11 +202,27 @@ const fetchAlbumData = async () => {
     
     if (response.ok) {
       const data = await response.json();
-      cards.value = data.cards || [];
+      allCards.value = data.cards || [];
+      
+      allCards.value.sort((a, b) => {
+        const seriesCompare = (a.seriesName || '').localeCompare(b.seriesName || '');
+        if (seriesCompare !== 0) return seriesCompare;
+        return (a.rarityLevel || 1) - (b.rarityLevel || 1);
+      });
+      
+      cards.value = [...allCards.value];
       totalCards.value = data.totalCards || 0;
       ownedCards.value = data.ownedCards || 0;
       completionRate.value = data.completionRate || 0;
       currentPage.value = 0;
+      
+      const seriesSet = new Set();
+      allCards.value.forEach(card => {
+        if (card.seriesName) {
+          seriesSet.add(card.seriesName);
+        }
+      });
+      seriesList.value = Array.from(seriesSet).sort();
     }
   } catch (error) {
     console.error('获取图鉴数据失败:', error);
@@ -201,6 +263,28 @@ onMounted(() => {
   font-weight: 600;
   color: #2d3748;
   margin: 0;
+}
+
+.filter-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-box select {
+  padding: 8px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #475569;
+  background: white;
+  cursor: pointer;
+  min-width: 140px;
+}
+
+.filter-box select:focus {
+  outline: none;
+  border-color: #667eea;
 }
 
 .description {
@@ -353,15 +437,15 @@ onMounted(() => {
 
 .photo-frame {
   background: linear-gradient(145deg, #ffffff 0%, #f8f4ec 100%);
-  padding: 5px;
+  padding: 6px;
   box-shadow: 
     0 2px 8px rgba(0, 0, 0, 0.12),
     0 1px 3px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   position: relative;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  border-radius: 3px;
-  width: 140px;
+  border-radius: 4px;
+  width: 180px;
   flex-shrink: 0;
 }
 
@@ -638,7 +722,7 @@ onMounted(() => {
 }
 
 .photo-caption {
-  padding: 10px 6px 6px;
+  padding: 8px 6px;
   text-align: center;
   background: linear-gradient(180deg, #ffffff 0%, #f8f4ec 100%);
   position: relative;
@@ -654,46 +738,31 @@ onMounted(() => {
   background: linear-gradient(to right, transparent, #d4a574, transparent);
 }
 
-.caption-series {
-  display: block;
-  font-size: 9px;
-  color: #9ca3af;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.caption-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
 }
 
 .caption-name {
-  display: block;
   font-size: 12px;
   font-weight: 700;
   color: #374151;
-  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.caption-name {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  color: #374151;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 1;
+  text-align: left;
 }
 
 .caption-type {
-  display: inline-block;
   font-size: 10px;
   font-weight: 800;
-  padding: 3px 10px;
-  border-radius: 10px;
+  padding: 2px 8px;
+  border-radius: 8px;
   letter-spacing: 0.5px;
-  text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 .caption-type.legendary {

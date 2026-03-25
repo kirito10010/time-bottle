@@ -43,6 +43,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/user/**").permitAll()
+                .requestMatchers("/api/admin/**").permitAll()
                 .requestMatchers("/api/categories/**").permitAll()
                 .requestMatchers("/api/bills/**").permitAll()
                 .requestMatchers("/api/project-configs/**").permitAll()
@@ -52,6 +53,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/points/**").permitAll()
                 .requestMatchers("/api/password-reset/**").permitAll()
                 .requestMatchers("/api/cards/**").permitAll()
+                .requestMatchers("/api/consignments/**").permitAll()
+                .requestMatchers("/api/exam/**").permitAll()
                 .requestMatchers("/Usersimg/**").permitAll()
                 .requestMatchers("/default-avatar.svg").permitAll()
                 .requestMatchers("/test.html").permitAll()

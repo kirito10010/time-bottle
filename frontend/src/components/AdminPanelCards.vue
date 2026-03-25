@@ -64,54 +64,77 @@
     </div>
     
     <!-- 添加/编辑卡片弹窗 -->
-    <div v-if="showCardModal" class="modal-overlay" @click.self="closeCardModal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>{{ isEditing ? '编辑卡片' : '添加卡片' }}</h3>
-          <button class="modal-close" @click="closeCardModal">&times;</button>
+    <Teleport to="body">
+      <div v-if="showCardModal" class="modal-overlay" 
+        @mousedown="handleOverlayMouseDown" 
+        @mouseup="(e) => handleOverlayMouseUp(e, closeCardModal)">
+        <div class="modal modal-form" @click.stop>
+          <form @submit.prevent="saveCard">
+            <div class="modal-header">
+              <h3>{{ isEditing ? '编辑卡片' : '添加卡片' }}</h3>
+              <div class="modal-header-actions">
+                <button type="submit" class="btn btn-primary" :disabled="saving">
+                  {{ saving ? '保存中...' : '保存' }}
+                </button>
+              </div>
+            </div>
+            
+            <div class="modal-body">
+              <div class="form-column">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>系列名称 <span class="required">*</span></label>
+                    <input type="text" v-model="cardForm.seriesName" placeholder="请输入系列名称" required>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label>卡片名称 <span class="required">*</span></label>
+                    <input type="text" v-model="cardForm.name" placeholder="请输入卡片名称" required>
+                  </div>
+                </div>
+                
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>卡片类型 <span class="required">*</span></label>
+                    <input type="text" v-model="cardForm.type" placeholder="请输入卡片类型" required>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label>稀有度级别 <span class="required">*</span></label>
+                    <select v-model="cardForm.rarityLevel" required>
+                      <option :value="1">1 - 普通 (40%)</option>
+                      <option :value="2">2 - 稀有 (30%)</option>
+                      <option :value="3">3 - 超稀有 (15%)</option>
+                      <option :value="4">4 - 史诗 (10%)</option>
+                      <option :value="5">5 - 传说 (5%)</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div class="form-group">
+                  <label>图片URL <span class="required">*</span></label>
+                  <input type="url" v-model="cardForm.imageUrl" placeholder="请输入图片完整URL" required>
+                </div>
+              </div>
+              
+              <div class="preview-column">
+                <div class="preview-container">
+                  <p class="preview-title">图片预览</p>
+                  <div class="preview-image-wrapper">
+                    <img v-if="cardForm.imageUrl" :src="cardForm.imageUrl" alt="预览" @error="imageLoadError = true">
+                    <div v-else class="preview-placeholder">
+                      <span class="placeholder-icon">🖼️</span>
+                      <span class="placeholder-text">输入URL后显示预览</span>
+                    </div>
+                  </div>
+                  <p v-if="imageLoadError" class="error-text">图片加载失败，请检查URL</p>
+                </div>
+              </div>
+            </div>
+          </form>
         </div>
-        <form @submit.prevent="saveCard">
-          <div class="form-group">
-            <label>系列名称 <span class="required">*</span></label>
-            <input type="text" v-model="cardForm.seriesName" placeholder="请输入系列名称" required>
-          </div>
-          <div class="form-group">
-            <label>卡片名称 <span class="required">*</span></label>
-            <input type="text" v-model="cardForm.name" placeholder="请输入卡片名称" required>
-          </div>
-          <div class="form-group">
-            <label>卡片类型 <span class="required">*</span></label>
-            <input type="text" v-model="cardForm.type" placeholder="请输入卡片类型" required>
-          </div>
-          <div class="form-group">
-            <label>稀有度级别 <span class="required">*</span></label>
-            <select v-model="cardForm.rarityLevel" required>
-              <option :value="1">1 - 普通 (40%)</option>
-              <option :value="2">2 - 稀有 (30%)</option>
-              <option :value="3">3 - 超稀有 (15%)</option>
-              <option :value="4">4 - 史诗 (10%)</option>
-              <option :value="5">5 - 传说 (5%)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>图片URL <span class="required">*</span></label>
-            <input type="url" v-model="cardForm.imageUrl" placeholder="请输入图片完整URL" required>
-            <p class="form-tip">支持外链图片地址，如: https://example.com/image.jpg</p>
-          </div>
-          <div class="image-preview" v-if="cardForm.imageUrl">
-            <p>图片预览:</p>
-            <img :src="cardForm.imageUrl" alt="预览" @error="imageLoadError = true">
-            <p v-if="imageLoadError" class="error-text">图片加载失败，请检查URL</p>
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="btn-cancel" @click="closeCardModal">取消</button>
-            <button type="submit" class="btn-save" :disabled="saving">
-              {{ saving ? '保存中...' : '保存' }}
-            </button>
-          </div>
-        </form>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -144,6 +167,19 @@ const packs = ref([
   { id: 3, name: '史诗卡包', emoji: '💎', description: '包含1张史诗卡片', price: 200 },
   { id: 4, name: '传说卡包', emoji: '👑', description: '包含1张传说卡片', price: 500 },
 ]);
+
+let overlayMouseDownTarget = null;
+
+const handleOverlayMouseDown = (e) => {
+  overlayMouseDownTarget = e.target;
+};
+
+const handleOverlayMouseUp = (e, closeCallback) => {
+  if (overlayMouseDownTarget === e.target && e.target.classList.contains('modal-overlay')) {
+    closeCallback();
+  }
+  overlayMouseDownTarget = null;
+};
 
 const getRarityClass = (rarityLevel) => {
   if (!rarityLevel) return 'common';
@@ -477,8 +513,8 @@ onMounted(() => {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -486,13 +522,20 @@ onMounted(() => {
   z-index: 1000;
 }
 
-.modal-content {
-  background: white;
+.modal {
+  background: #ffffff;
   border-radius: 16px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  height: 80vh;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-form {
+  width: 80vw;
+  height: 80vh;
 }
 
 .modal-header {
@@ -501,23 +544,115 @@ onMounted(() => {
   align-items: center;
   padding: 20px 24px;
   border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 
 .modal-header h3 {
   margin: 0;
   color: #1a202c;
+  font-size: 18px;
+  font-weight: 600;
 }
 
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #64748b;
+.modal-header-actions {
+  display: flex;
+  gap: 8px;
 }
 
-.modal-content form {
+.modal form {
   padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-body {
+  display: flex;
+  gap: 24px;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.form-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.preview-column {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-container {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-title {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  text-align: center;
+}
+
+.preview-image-wrapper {
+  aspect-ratio: 358 / 494;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.preview-image-wrapper img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #94a3b8;
+}
+
+.placeholder-icon {
+  font-size: 48px;
+}
+
+.placeholder-text {
+  font-size: 13px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-row .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.form-row .form-group.full-width {
+  flex: none;
+  width: 100%;
 }
 
 .form-group {
@@ -529,6 +664,7 @@ onMounted(() => {
   margin-bottom: 8px;
   font-weight: 500;
   color: #334155;
+  font-size: 14px;
 }
 
 .required {
@@ -542,12 +678,14 @@ onMounted(() => {
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 14px;
+  transition: border-color 0.2s;
 }
 
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
   border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-tip {
@@ -556,11 +694,52 @@ onMounted(() => {
   margin-top: 6px;
 }
 
-.image-preview {
-  margin-bottom: 20px;
-  padding: 16px;
+.error-text {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
   background: #f8fafc;
+}
+
+.btn {
+  padding: 8px 16px;
   border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.btn-primary:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
 }
 
 .image-preview p {

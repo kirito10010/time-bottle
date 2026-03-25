@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch, provide } from 'vue';
+import { ref, onMounted, onUnmounted, watch, provide, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import UserProfileEdit from './components/UserProfileEdit.vue';
 import { ElConfigProvider, ElMessage } from 'element-plus';
@@ -14,12 +14,15 @@ const userInfo = ref({
   username: '用户名',
   avatar: '',
   nickname: '未命名',
-  id: null
+  id: null,
+  role: '0'
 });
 
 const userPoints = ref(0);
 const hasSignedIn = ref(false);
 const isSigningIn = ref(false);
+
+const isAdmin = computed(() => userInfo.value.role === '2');
 
 const expandedMenus = ref({
   dataControl: true,
@@ -51,7 +54,8 @@ const logout = () => {
     username: '用户名',
     avatar: '',
     nickname: '未命名',
-    id: null
+    id: null,
+    role: '0'
   };
   userPoints.value = 0;
   hasSignedIn.value = false;
@@ -240,7 +244,7 @@ onUnmounted(() => {
                 </ul>
               </Transition>
             </li>
-            <li class="nav-item">
+            <li class="nav-item" v-if="isAdmin">
               <div class="nav-item-title" @click="toggleMenu('adminPanel')">
                 <span class="menu-icon">⚙️</span>
                 <span>管理员后台</span>
@@ -250,6 +254,7 @@ onUnmounted(() => {
                 <ul v-if="expandedMenus.adminPanel" class="sub-menu">
                   <li><router-link to="/admin-users"><span class="menu-icon">👥</span>用户管理</router-link></li>
                   <li><router-link to="/admin-cards"><span class="menu-icon">🃏</span>集卡管理</router-link></li>
+                  <li><router-link to="/admin-questions"><span class="menu-icon">📝</span>题目管理</router-link></li>
                   <li><router-link to="/admin-feedback"><span class="menu-icon">💬</span>反馈管理</router-link></li>
                 </ul>
               </Transition>

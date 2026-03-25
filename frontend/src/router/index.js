@@ -11,6 +11,7 @@ import DreamCardClubPointsMall from '../components/DreamCardClubPointsMall.vue';
 import DreamCardClubDrawCard from '../components/DreamCardClubDrawCard.vue';
 import AdminPanelUsers from '../components/AdminPanelUsers.vue';
 import AdminPanelCards from '../components/AdminPanelCards.vue';
+import AdminPanelQuestions from '../components/AdminPanelQuestions.vue';
 import AdminPanelFeedback from '../components/AdminPanelFeedback.vue';
 
 const routes = [
@@ -78,19 +79,25 @@ const routes = [
     path: '/admin-users',
     name: 'AdminUsers',
     component: AdminPanelUsers,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
     path: '/admin-cards',
     name: 'AdminCards',
     component: AdminPanelCards,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin-questions',
+    name: 'AdminQuestions',
+    component: AdminPanelQuestions,
+    meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
     path: '/admin-feedback',
     name: 'AdminFeedback',
     component: AdminPanelFeedback,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, requiresAdmin: true }
   }
 ];
 
@@ -105,6 +112,13 @@ router.beforeEach((to) => {
   
   if (to.meta.requiresAuth && !isLoggedIn) {
     return '/login';
+  }
+  
+  if (to.meta.requiresAdmin) {
+    const user = savedUser ? JSON.parse(savedUser) : null;
+    if (!user || user.role !== '2') {
+      return '/financial-ledger';
+    }
   }
   
   if ((to.path === '/login' || to.path === '/register') && isLoggedIn) {

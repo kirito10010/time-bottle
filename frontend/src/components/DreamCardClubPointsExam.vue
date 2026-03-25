@@ -7,25 +7,10 @@
     <div v-if="!examStarted" class="exam-intro">
       <div class="intro-card">
         <div class="intro-icon">📝</div>
-        <h3>每日知识问答</h3>
-        <p>回答5道题目，每题正确可获得2积分</p>
-        <p class="intro-tip">💡 每天可参加一次，题目随机生成</p>
+        <h3>知识问答</h3>
+        <p>回答5道题目，答对3题及以上可获得积分奖励</p>
+        <p class="intro-tip">💡 对3题得10积分，对4题得30积分，对5题得60积分</p>
         <button class="start-btn" @click="startExam">开始答题</button>
-      </div>
-      
-      <div class="stats-row">
-        <div class="stat-card">
-          <span class="stat-value">{{ todayScore }}</span>
-          <span class="stat-label">今日得分</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value">{{ totalEarned }}</span>
-          <span class="stat-label">累计获得积分</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-value">{{ correctRate }}%</span>
-          <span class="stat-label">正确率</span>
-        </div>
       </div>
     </div>
     
@@ -36,27 +21,61 @@
       <p class="question-counter">第 {{ currentIndex + 1 }} / {{ questions.length }} 题</p>
       
       <div class="question-card">
-        <h4>{{ currentQuestion.question }}</h4>
+        <h4>{{ currentQuestion.questionText }}</h4>
         <div class="options">
           <button 
-            v-for="(option, index) in currentQuestion.options" 
-            :key="index"
             class="option-btn"
             :class="{ 
-              'selected': selectedAnswer === index,
-              'correct': showAnswer && index === currentQuestion.correctIndex,
-              'wrong': showAnswer && selectedAnswer === index && index !== currentQuestion.correctIndex
+              'selected': selectedAnswer === 'A',
+              'correct': showAnswer && currentQuestion.correctOption === 'A',
+              'wrong': showAnswer && selectedAnswer === 'A' && currentQuestion.correctOption !== 'A'
             }"
             :disabled="showAnswer"
-            @click="selectAnswer(index)"
+            @click="selectAnswer('A')"
           >
-            {{ String.fromCharCode(65 + index) }}. {{ option }}
+            A. {{ currentQuestion.optionA }}
+          </button>
+          <button 
+            class="option-btn"
+            :class="{ 
+              'selected': selectedAnswer === 'B',
+              'correct': showAnswer && currentQuestion.correctOption === 'B',
+              'wrong': showAnswer && selectedAnswer === 'B' && currentQuestion.correctOption !== 'B'
+            }"
+            :disabled="showAnswer"
+            @click="selectAnswer('B')"
+          >
+            B. {{ currentQuestion.optionB }}
+          </button>
+          <button 
+            class="option-btn"
+            :class="{ 
+              'selected': selectedAnswer === 'C',
+              'correct': showAnswer && currentQuestion.correctOption === 'C',
+              'wrong': showAnswer && selectedAnswer === 'C' && currentQuestion.correctOption !== 'C'
+            }"
+            :disabled="showAnswer"
+            @click="selectAnswer('C')"
+          >
+            C. {{ currentQuestion.optionC }}
+          </button>
+          <button 
+            class="option-btn"
+            :class="{ 
+              'selected': selectedAnswer === 'D',
+              'correct': showAnswer && currentQuestion.correctOption === 'D',
+              'wrong': showAnswer && selectedAnswer === 'D' && currentQuestion.correctOption !== 'D'
+            }"
+            :disabled="showAnswer"
+            @click="selectAnswer('D')"
+          >
+            D. {{ currentQuestion.optionD }}
           </button>
         </div>
         
         <div v-if="showAnswer" class="answer-feedback">
           <p :class="{ 'correct-text': isCorrect, 'wrong-text': !isCorrect }">
-            {{ isCorrect ? '✓ 回答正确！+2积分' : '✗ 回答错误' }}
+            {{ isCorrect ? '✓ 回答正确！' : '✗ 回答错误' }}
           </p>
           <button class="next-btn" @click="nextQuestion">
             {{ currentIndex < questions.length - 1 ? '下一题' : '查看结果' }}
@@ -67,10 +86,11 @@
     
     <div v-else class="exam-result">
       <div class="result-card">
-        <div class="result-icon">{{ score >= 8 ? '🎉' : score >= 4 ? '👍' : '💪' }}</div>
+        <div class="result-icon">{{ pointsEarned >= 30 ? '🎉' : pointsEarned >= 10 ? '👍' : '💪' }}</div>
         <h3>考试完成！</h3>
-        <p class="result-score">获得 <span>{{ score }}</span> 积分</p>
+        <p class="result-score">获得 <span>{{ pointsEarned }}</span> 积分</p>
         <p class="result-detail">答对 {{ correctCount }} / {{ questions.length }} 题</p>
+        <p class="result-tip" v-if="pointsEarned === 0">再接再厉，答对3题即可获得积分奖励！</p>
         <button class="retry-btn" @click="resetExam">再来一次</button>
       </div>
     </div>
@@ -78,66 +98,61 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, inject } from 'vue';
 import { ElMessage } from 'element-plus';
+
+const API_BASE = 'http://localhost:8080/api/exam';
+const refreshPoints = inject('refreshPoints');
 
 const examStarted = ref(false);
 const examFinished = ref(false);
 const currentIndex = ref(0);
 const selectedAnswer = ref(null);
 const showAnswer = ref(false);
-const score = ref(0);
 const correctCount = ref(0);
-const todayScore = ref(0);
-const totalEarned = ref(156);
-const correctRate = ref(78);
+const pointsEarned = ref(0);
 
-const questions = ref([
-  {
-    question: 'Vue 3 中用于创建响应式数据的 API 是什么？',
-    options: ['reactive', 'responsive', 'reflexive', 'reflective'],
-    correctIndex: 0
-  },
-  {
-    question: 'JavaScript 中，以下哪个方法用于数组遍历？',
-    options: ['forEach', 'forLoop', 'iterate', 'traverse'],
-    correctIndex: 0
-  },
-  {
-    question: 'CSS 中，flex-direction: column 会使子元素如何排列？',
-    options: ['水平排列', '垂直排列', '网格排列', '随机排列'],
-    correctIndex: 1
-  },
-  {
-    question: 'HTTP 状态码 404 表示什么？',
-    options: ['服务器错误', '请求成功', '资源未找到', '权限不足'],
-    correctIndex: 2
-  },
-  {
-    question: 'Git 中，用于查看提交历史的命令是？',
-    options: ['git status', 'git log', 'git diff', 'git show'],
-    correctIndex: 1
-  }
-]);
+const questions = ref([]);
 
-const currentQuestion = computed(() => questions.value[currentIndex.value]);
-const isCorrect = computed(() => selectedAnswer.value === currentQuestion.value.correctIndex);
+const currentQuestion = computed(() => questions.value[currentIndex.value] || {});
+const isCorrect = computed(() => selectedAnswer.value === currentQuestion.value.correctOption);
 
-const startExam = () => {
-  examStarted.value = true;
-  examFinished.value = false;
-  currentIndex.value = 0;
-  score.value = 0;
-  correctCount.value = 0;
+const getToken = () => {
+  return localStorage.getItem('token') || '';
 };
 
-const selectAnswer = (index) => {
+const startExam = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/questions`, {
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('开始考试失败:', response.status, text);
+      ElMessage.error('获取题目失败，请检查登录状态');
+      return;
+    }
+    
+    const data = await response.json();
+    questions.value = data.questions;
+    examStarted.value = true;
+    examFinished.value = false;
+    currentIndex.value = 0;
+    correctCount.value = 0;
+    pointsEarned.value = 0;
+  } catch (error) {
+    console.error('开始考试失败:', error);
+    ElMessage.error('网络错误，请稍后重试');
+  }
+};
+
+const selectAnswer = (option) => {
   if (showAnswer.value) return;
-  selectedAnswer.value = index;
+  selectedAnswer.value = option;
   showAnswer.value = true;
   
   if (isCorrect.value) {
-    score.value += 2;
     correctCount.value++;
   }
 };
@@ -148,10 +163,38 @@ const nextQuestion = () => {
     selectedAnswer.value = null;
     showAnswer.value = false;
   } else {
-    examFinished.value = true;
-    todayScore.value += score.value;
-    totalEarned.value += score.value;
-    ElMessage.success(`恭喜完成考试！获得 ${score.value} 积分`);
+    submitExam();
+  }
+};
+
+const submitExam = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: JSON.stringify({
+        correctCount: correctCount.value
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      pointsEarned.value = data.pointsEarned;
+      examFinished.value = true;
+      if (data.pointsEarned > 0) {
+        ElMessage.success(data.message);
+        if (refreshPoints) refreshPoints();
+      }
+    } else {
+      ElMessage.error(data.message || '提交失败');
+    }
+  } catch (error) {
+    console.error('提交考试失败:', error);
+    ElMessage.error('网络错误，请稍后重试');
   }
 };
 
@@ -161,8 +204,9 @@ const resetExam = () => {
   currentIndex.value = 0;
   selectedAnswer.value = null;
   showAnswer.value = false;
-  score.value = 0;
   correctCount.value = 0;
+  pointsEarned.value = 0;
+  questions.value = [];
 };
 </script>
 
@@ -238,32 +282,6 @@ const resetExam = () => {
 .start-btn:hover {
   transform: scale(1.05);
   box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
-}
-
-.stats-row {
-  display: flex;
-  gap: 16px;
-}
-
-.stat-card {
-  flex: 1;
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.stat-value {
-  display: block;
-  font-size: 28px;
-  font-weight: 700;
-  color: #2563eb;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #64748b;
 }
 
 .exam-area {
@@ -422,6 +440,12 @@ const resetExam = () => {
 
 .result-detail {
   color: #94a3b8;
+  margin: 0 0 8px 0;
+}
+
+.result-tip {
+  color: #ef4444;
+  font-size: 14px;
   margin: 0 0 24px 0;
 }
 
