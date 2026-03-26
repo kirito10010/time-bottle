@@ -8,6 +8,7 @@ import DataControlConsolePerformanceDashboard from '../components/DataControlCon
 import DreamCardClubMyAlbum from '../components/DreamCardClubMyAlbum.vue';
 import DreamCardClubPointsExam from '../components/DreamCardClubPointsExam.vue';
 import DreamCardClubPointsMall from '../components/DreamCardClubPointsMall.vue';
+import DreamCardClubCardExchange from '../components/DreamCardClubCardExchange.vue';
 import DreamCardClubDrawCard from '../components/DreamCardClubDrawCard.vue';
 import AdminPanelUsers from '../components/AdminPanelUsers.vue';
 import AdminPanelCards from '../components/AdminPanelCards.vue';
@@ -67,6 +68,12 @@ const routes = [
     path: '/points-mall',
     name: 'PointsMall',
     component: DreamCardClubPointsMall,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/card-exchange',
+    name: 'CardExchange',
+    component: DreamCardClubCardExchange,
     meta: { requiresAuth: true }
   },
   {

@@ -30,7 +30,7 @@ public class UserService {
         Page<User> userPage;
         
         if (keyword != null && !keyword.isEmpty()) {
-            userPage = userRepository.findByKeyword(keyword, pageRequest);
+            userPage = userRepository.search(keyword, pageRequest);
         } else {
             userPage = userRepository.findAll(pageRequest);
         }
@@ -118,7 +118,7 @@ public class UserService {
         user.setRole("0");
         user.setPoints(0);
         user.setStatus("1");
-        user.setAvatar("default-avatar.png");
+        user.setAvatar("default-avatar.svg");
         user.setCreatedAt(new Date());
         user.setUpdatedAt(new Date());
         

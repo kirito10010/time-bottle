@@ -25,7 +25,7 @@ public class PointsService {
     private UserRepository userRepository;
 
     private static final int SIGN_IN_POINTS = 10;
-    private static final int ACCOUNTING_POINTS = 1;
+    private static final int ACCOUNTING_POINTS = 10;
 
     @Transactional
     public Map<String, Object> signIn(@NonNull Integer userId) {

@@ -13,4 +13,5 @@ public interface UserCardRepository extends JpaRepository<UserCard, Long> {
     Optional<UserCard> findByUidAndCardId(Long uid, Long cardId);
     boolean existsByUidAndCardId(Long uid, Long cardId);
     long countByUid(Long uid);
+    List<UserCard> findByCardIdAndQuantityGreaterThan(Long cardId, Integer quantity);
 }

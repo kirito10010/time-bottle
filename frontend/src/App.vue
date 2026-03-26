@@ -26,7 +26,7 @@ const isAdmin = computed(() => userInfo.value.role === '2');
 
 const expandedMenus = ref({
   dataControl: true,
-  dreamCardClub: true,
+  dreamCardClub: false,
   adminPanel: false
 });
 
@@ -44,6 +44,23 @@ const toggleUserMenu = () => {
 
 const toggleMenu = (menuKey) => {
   expandedMenus.value[menuKey] = !expandedMenus.value[menuKey];
+  saveMenuState();
+};
+
+const saveMenuState = () => {
+  localStorage.setItem('expandedMenus', JSON.stringify(expandedMenus.value));
+};
+
+const loadMenuState = () => {
+  const saved = localStorage.getItem('expandedMenus');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      expandedMenus.value = { ...expandedMenus.value, ...parsed };
+    } catch (e) {
+      console.error('Failed to parse menu state:', e);
+    }
+  }
 };
 
 const logout = () => {
@@ -70,7 +87,7 @@ const getAvatarUrl = (avatar) => {
     return avatar;
   }
   if (avatar === 'default-avatar.svg' || avatar === 'default-avatar.png') {
-    return 'http://localhost:8080/' + avatar;
+    return 'http://localhost:8080/default-avatar.svg';
   }
   if (avatar.includes('\\') || avatar.includes('/')) {
     const usersimgIndex = avatar.indexOf('Usersimg');
@@ -190,6 +207,7 @@ watch(() => route.path, () => {
 });
 
 onMounted(() => {
+  loadMenuState();
   checkAuth();
   document.addEventListener('click', handleClickOutside);
 });
@@ -240,6 +258,7 @@ onUnmounted(() => {
                   <li><router-link to="/my-album"><span class="menu-icon">📚</span>我的图鉴</router-link></li>
                   <li><router-link to="/points-exam"><span class="menu-icon">📝</span>积分考试</router-link></li>
                   <li><router-link to="/points-mall"><span class="menu-icon">🛒</span>积分商城</router-link></li>
+                  <li><router-link to="/card-exchange"><span class="menu-icon">🔄</span>卡牌交换</router-link></li>
                   <li><router-link to="/draw-card"><span class="menu-icon">🎰</span>抽取卡片</router-link></li>
                 </ul>
               </Transition>
@@ -273,6 +292,18 @@ onUnmounted(() => {
                 <line x1="3" y1="18" x2="21" y2="18"></line>
               </svg>
             </button>
+          </div>
+          <div class="header-marquee">
+            <div class="marquee-content">
+              <span class="marquee-item">💡 每日签到可获得5积分</span>
+              <span class="marquee-item">📝 积分考试答对3题得10积分，答对4题得30积分，答对5题得60积分</span>
+              <span class="marquee-item">🎰 抽卡可获得稀有卡片，在积分商城出售给其他玩家赚取积分</span>
+              <span class="marquee-item">🛒 在积分商城购买其他玩家出售的卡片</span>
+              <span class="marquee-item">💡 每日签到可获得5积分</span>
+              <span class="marquee-item">📝 积分考试答对3题得10积分，答对4题得30积分，答对5题得60积分</span>
+              <span class="marquee-item">🎰 抽卡可获得稀有卡片，在积分商城出售给其他玩家赚取积分</span>
+              <span class="marquee-item">🛒 在积分商城购买其他玩家出售的卡片</span>
+            </div>
           </div>
           <div class="user-info">
             <div class="user-profile" @click="toggleUserMenu">
@@ -724,6 +755,39 @@ body {
 
 .app-container.sidebar-hidden .sidebar-toggle svg {
   transform: rotate(180deg);
+}
+
+.header-marquee {
+  flex: 1;
+  overflow: hidden;
+  margin: 0 20px;
+}
+
+.marquee-content {
+  display: flex;
+  animation: marquee 15s linear infinite;
+  white-space: nowrap;
+}
+
+.marquee-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 24px;
+  font-size: 13px;
+  color: #4a5568;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  margin-right: 40px;
+  white-space: nowrap;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .user-info {

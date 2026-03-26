@@ -162,7 +162,7 @@ const flipCardsSequentially = (count) => {
   for (let i = 0; i < count; i++) {
     setTimeout(() => {
       flippedCards.value[i] = true;
-    }, i * 180);
+    }, 300 + i * 180);
   }
 };
 
@@ -744,16 +744,47 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.card-flip-back.legendary { box-shadow: 0 0 8px rgba(255, 215, 0, 0.8); animation: glow-legendary-small 2s ease-in-out infinite alternate; }
-.card-flip-back.epic { box-shadow: 0 0 6px rgba(168, 85, 247, 0.8); animation: glow-epic-small 2s ease-in-out infinite alternate; }
-.card-flip-back.rare { box-shadow: 0 0 5px rgba(59, 130, 246, 0.8); animation: glow-rare-small 2s ease-in-out infinite alternate; }
-.card-flip-back.uncommon { box-shadow: 0 0 4px rgba(34, 197, 94, 0.8); animation: glow-uncommon-small 2s ease-in-out infinite alternate; }
-.card-flip-back.common { box-shadow: 0 0 3px rgba(156, 163, 175, 0.6); }
+.card-flip-back.legendary { 
+  box-shadow: 0 0 15px rgba(255, 215, 0, 1), 0 0 30px rgba(255, 215, 0, 0.6), 0 0 45px rgba(255, 215, 0, 0.3); 
+  animation: glow-legendary-small 1.5s ease-in-out infinite alternate; 
+  border: 2px solid rgba(255, 215, 0, 0.8);
+}
+.card-flip-back.epic { 
+  box-shadow: 0 0 12px rgba(168, 85, 247, 1), 0 0 24px rgba(168, 85, 247, 0.6), 0 0 36px rgba(168, 85, 247, 0.3); 
+  animation: glow-epic-small 1.5s ease-in-out infinite alternate; 
+  border: 2px solid rgba(168, 85, 247, 0.8);
+}
+.card-flip-back.rare { 
+  box-shadow: 0 0 10px rgba(59, 130, 246, 1), 0 0 20px rgba(59, 130, 246, 0.6), 0 0 30px rgba(59, 130, 246, 0.3); 
+  animation: glow-rare-small 1.5s ease-in-out infinite alternate; 
+  border: 2px solid rgba(59, 130, 246, 0.8);
+}
+.card-flip-back.uncommon { 
+  box-shadow: 0 0 8px rgba(34, 197, 94, 1), 0 0 16px rgba(34, 197, 94, 0.6), 0 0 24px rgba(34, 197, 94, 0.3); 
+  animation: glow-uncommon-small 1.5s ease-in-out infinite alternate; 
+  border: 2px solid rgba(34, 197, 94, 0.8);
+}
+.card-flip-back.common { 
+  box-shadow: 0 0 5px rgba(156, 163, 175, 0.8); 
+  border: 1px solid rgba(156, 163, 175, 0.5);
+}
 
-@keyframes glow-legendary-small { from { box-shadow: 0 0 8px rgba(255, 215, 0, 0.8); } to { box-shadow: 0 0 12px rgba(255, 215, 0, 1); } }
-@keyframes glow-epic-small { from { box-shadow: 0 0 6px rgba(168, 85, 247, 0.8); } to { box-shadow: 0 0 10px rgba(168, 85, 247, 1); } }
-@keyframes glow-rare-small { from { box-shadow: 0 0 5px rgba(59, 130, 246, 0.8); } to { box-shadow: 0 0 8px rgba(59, 130, 246, 1); } }
-@keyframes glow-uncommon-small { from { box-shadow: 0 0 4px rgba(34, 197, 94, 0.8); } to { box-shadow: 0 0 6px rgba(34, 197, 94, 1); } }
+@keyframes glow-legendary-small { 
+  from { box-shadow: 0 0 15px rgba(255, 215, 0, 1), 0 0 30px rgba(255, 215, 0, 0.6), 0 0 45px rgba(255, 215, 0, 0.3); } 
+  to { box-shadow: 0 0 20px rgba(255, 215, 0, 1), 0 0 40px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 215, 0, 0.4); } 
+}
+@keyframes glow-epic-small { 
+  from { box-shadow: 0 0 12px rgba(168, 85, 247, 1), 0 0 24px rgba(168, 85, 247, 0.6), 0 0 36px rgba(168, 85, 247, 0.3); } 
+  to { box-shadow: 0 0 18px rgba(168, 85, 247, 1), 0 0 36px rgba(168, 85, 247, 0.8), 0 0 54px rgba(168, 85, 247, 0.4); } 
+}
+@keyframes glow-rare-small { 
+  from { box-shadow: 0 0 10px rgba(59, 130, 246, 1), 0 0 20px rgba(59, 130, 246, 0.6), 0 0 30px rgba(59, 130, 246, 0.3); } 
+  to { box-shadow: 0 0 15px rgba(59, 130, 246, 1), 0 0 30px rgba(59, 130, 246, 0.8), 0 0 45px rgba(59, 130, 246, 0.4); } 
+}
+@keyframes glow-uncommon-small { 
+  from { box-shadow: 0 0 8px rgba(34, 197, 94, 1), 0 0 16px rgba(34, 197, 94, 0.6), 0 0 24px rgba(34, 197, 94, 0.3); } 
+  to { box-shadow: 0 0 12px rgba(34, 197, 94, 1), 0 0 24px rgba(34, 197, 94, 0.8), 0 0 36px rgba(34, 197, 94, 0.4); } 
+}
 
 .card-item-image {
   flex: 1;

@@ -110,7 +110,9 @@
     </div>
 
     <Teleport to="body">
-      <div v-if="showBuyModal" class="modal-overlay" @click.self="closeBuyModal">
+      <div v-if="showBuyModal" class="modal-overlay" 
+        @mousedown="handleOverlayMouseDown" 
+        @mouseup="handleOverlayMouseUp($event, closeBuyModal)">
         <div class="modal-content">
           <div class="modal-header">
             <h3>购买卡片</h3>
@@ -146,7 +148,9 @@
     </Teleport>
 
     <Teleport to="body">
-      <div v-if="showSellModal" class="modal-overlay" @click.self="closeSellModal">
+      <div v-if="showSellModal" class="modal-overlay" 
+        @mousedown="handleOverlayMouseDown" 
+        @mouseup="handleOverlayMouseUp($event, closeSellModal)">
         <div class="modal-content">
           <div class="modal-header">
             <h3>上架卡片</h3>
@@ -209,6 +213,7 @@ const selectedCard = ref(null);
 const buyQuantity = ref(1);
 const sellQuantity = ref(1);
 const sellPrice = ref(10);
+const mouseDownOnOverlay = ref(false);
 
 const getRarityClass = (rarityLevel) => {
   if (!rarityLevel) return 'common';
@@ -222,7 +227,8 @@ const getRarityClass = (rarityLevel) => {
 };
 
 const getAvatarUrl = (avatar) => {
-  if (!avatar) return '/default-avatar.svg';
+  if (!avatar) return 'http://localhost:8080/default-avatar.svg';
+  if (avatar === 'default-avatar.png') return 'http://localhost:8080/default-avatar.svg';
   if (avatar.startsWith('http')) return avatar;
   return `http://localhost:8080/Usersimg/${avatar}`;
 };
@@ -334,6 +340,17 @@ const openSellModal = (card) => {
 const closeSellModal = () => {
   showSellModal.value = false;
   selectedCard.value = null;
+};
+
+const handleOverlayMouseDown = (e) => {
+  mouseDownOnOverlay.value = e.target.classList.contains('modal-overlay');
+};
+
+const handleOverlayMouseUp = (e, closeModal) => {
+  if (mouseDownOnOverlay.value && e.target.classList.contains('modal-overlay')) {
+    closeModal();
+  }
+  mouseDownOnOverlay.value = false;
 };
 
 const buyCard = async () => {

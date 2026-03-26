@@ -56,7 +56,7 @@ const getAvatarUrl = (avatar) => {
     return avatar;
   }
   if (avatar === 'default-avatar.svg' || avatar === 'default-avatar.png') {
-    return 'http://localhost:8080/' + avatar;
+    return 'http://localhost:8080/default-avatar.svg';
   }
   return 'http://localhost:8080/Usersimg/' + avatar;
 };
