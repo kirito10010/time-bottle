@@ -50,15 +50,15 @@ const avatarFile = ref(null);
 
 const getAvatarUrl = (avatar) => {
   if (!avatar) {
-    return 'http://localhost:8080/default-avatar.svg';
+    return '/default-avatar.svg';
   }
   if (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('data:image/')) {
     return avatar;
   }
   if (avatar === 'default-avatar.svg' || avatar === 'default-avatar.png') {
-    return 'http://localhost:8080/default-avatar.svg';
+    return '/default-avatar.svg';
   }
-  return 'http://localhost:8080/Usersimg/' + avatar;
+  return '/Usersimg/' + avatar;
 };
 
 const handleAvatarChange = (event) => {
@@ -85,7 +85,7 @@ const handleSubmit = async () => {
       formData.append('avatar', avatarFile.value);
     }
     
-    const response = await fetch('http://localhost:8080/api/auth/profile', {
+    const response = await fetch('/api/auth/profile', {
       method: 'PUT',
       body: formData
     });

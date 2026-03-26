@@ -101,7 +101,7 @@
 import { ref, computed, inject } from 'vue';
 import { ElMessage } from 'element-plus';
 
-const API_BASE = 'http://localhost:8080/api/exam';
+const API_BASE = '/api/exam';
 const refreshPoints = inject('refreshPoints');
 
 const examStarted = ref(false);

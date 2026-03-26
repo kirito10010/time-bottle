@@ -261,7 +261,7 @@
 import { ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 
-const API_BASE = 'http://localhost:8080/api/card-exchange';
+const API_BASE = '/api/card-exchange';
 
 const activeTab = ref('gift');
 const myCards = ref([]);
@@ -289,10 +289,10 @@ const carouselPosition = ref(0);
 const getToken = () => localStorage.getItem('token') || '';
 
 const getAvatarUrl = (avatar) => {
-  if (!avatar) return 'http://localhost:8080/default-avatar.svg';
-  if (avatar === 'default-avatar.png') return 'http://localhost:8080/default-avatar.svg';
+  if (!avatar) return '/default-avatar.svg';
+  if (avatar === 'default-avatar.png') return '/default-avatar.svg';
   if (avatar.startsWith('http')) return avatar;
-  return `http://localhost:8080/Usersimg/${avatar}`;
+  return `/Usersimg/${avatar}`;
 };
 
 const formatDate = (date) => {

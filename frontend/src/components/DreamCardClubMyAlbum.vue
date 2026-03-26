@@ -194,7 +194,7 @@ const fetchAlbumData = async () => {
   const token = localStorage.getItem('token');
   
   try {
-    const response = await fetch('http://localhost:8080/api/cards/album', {
+    const response = await fetch('/api/cards/album', {
       headers: {
         'Authorization': `Bearer ${token}`
       }

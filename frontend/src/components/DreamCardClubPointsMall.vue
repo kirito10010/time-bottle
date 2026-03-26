@@ -192,7 +192,7 @@
 import { ref, onMounted, inject } from 'vue';
 import { ElMessage } from 'element-plus';
 
-const API_BASE = 'http://localhost:8080/api/consignments';
+const API_BASE = '/api/consignments';
 const refreshPoints = inject('refreshPoints', () => {});
 
 const userPoints = ref(0);
@@ -227,10 +227,10 @@ const getRarityClass = (rarityLevel) => {
 };
 
 const getAvatarUrl = (avatar) => {
-  if (!avatar) return 'http://localhost:8080/default-avatar.svg';
-  if (avatar === 'default-avatar.png') return 'http://localhost:8080/default-avatar.svg';
+  if (!avatar) return '/default-avatar.svg';
+  if (avatar === 'default-avatar.png') return '/default-avatar.svg';
   if (avatar.startsWith('http')) return avatar;
-  return `http://localhost:8080/Usersimg/${avatar}`;
+  return `/Usersimg/${avatar}`;
 };
 
 const switchTab = (tab) => {
@@ -249,7 +249,7 @@ const fetchUserPoints = async () => {
   if (!token) return;
   
   try {
-    const response = await fetch('http://localhost:8080/api/points/status', {
+    const response = await fetch('/api/points/status', {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (response.ok) {

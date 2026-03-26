@@ -81,22 +81,22 @@ const logout = () => {
 
 const getAvatarUrl = (avatar) => {
   if (!avatar) {
-    return 'http://localhost:8080/default-avatar.svg';
+    return '/default-avatar.svg';
   }
   if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
     return avatar;
   }
   if (avatar === 'default-avatar.svg' || avatar === 'default-avatar.png') {
-    return 'http://localhost:8080/default-avatar.svg';
+    return '/default-avatar.svg';
   }
   if (avatar.includes('\\') || avatar.includes('/')) {
     const usersimgIndex = avatar.indexOf('Usersimg');
     if (usersimgIndex !== -1) {
       const relativePath = avatar.substring(usersimgIndex);
-      return 'http://localhost:8080/' + relativePath.replace(/\\/g, '/');
+      return '/' + relativePath.replace(/\\/g, '/');
     }
   }
-  return 'http://localhost:8080/Usersimg/' + avatar;
+  return '/Usersimg/' + avatar;
 };
 
 const openUserProfileEdit = () => {

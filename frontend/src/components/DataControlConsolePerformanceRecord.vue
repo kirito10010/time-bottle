@@ -943,7 +943,7 @@ import { ElMessage, ElDatePicker, ElSelect, ElOption, ElMessageBox, ElInput, ElI
 import zhCn from 'element-plus/es/locale/lang/zh-cn';
 import * as echarts from 'echarts';
 
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = '/api';
 
 let mouseDownTarget = null;
 

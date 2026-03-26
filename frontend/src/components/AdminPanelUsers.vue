@@ -157,7 +157,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
-const API_BASE = 'http://localhost:8080/api/admin/users';
+const API_BASE = '/api/admin/users';
 
 const searchText = ref('');
 const filterRole = ref('');

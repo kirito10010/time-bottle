@@ -1018,7 +1018,7 @@ const fetchCategories = async () => {
   try {
     const userId = getUserId();
     
-    const response = await fetch(`http://localhost:8080/api/categories?userId=${userId}`);
+    const response = await fetch(`/api/categories?userId=${userId}`);
     if (response.ok) {
       const data = await response.json();
       categories.value = data.categories;
@@ -1062,7 +1062,7 @@ const fetchBills = async () => {
       params.append('remark', filterRemark.value);
     }
     
-    const url = `http://localhost:8080/api/${endpoint}?${params.toString()}`;
+    const url = `/api/${endpoint}?${params.toString()}`;
     
     const response = await fetch(url);
     
@@ -1097,7 +1097,7 @@ const fetchAllBills = async () => {
   try {
     const userId = getUserId();
     
-    const url = `http://localhost:8080/api/bills/all?page=1&pageSize=1000&userId=${userId}`;
+    const url = `/api/bills/all?page=1&pageSize=1000&userId=${userId}`;
     
     const response = await fetch(url);
     
@@ -1118,7 +1118,7 @@ const addBill = async () => {
   try {
     const userId = getUserId();
     
-    const response = await fetch('http://localhost:8080/api/bills', {
+    const response = await fetch('/api/bills', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -1184,7 +1184,7 @@ const editBill = (bill) => {
 // 更新账单
 const updateBill = async () => {
   try {
-    const response = await fetch(`http://localhost:8080/api/bills/${editBillData.value.id}`, {
+    const response = await fetch(`/api/bills/${editBillData.value.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
@@ -1228,7 +1228,7 @@ const deleteBill = async (billId) => {
       type: 'warning'
     });
     
-    const response = await fetch(`http://localhost:8080/api/bills/${billId}`, {
+    const response = await fetch(`/api/bills/${billId}`, {
       method: 'DELETE'
     });
     
@@ -1267,8 +1267,8 @@ const saveCategory = async () => {
     const userRole = currentUserRole.value;
     
     const url = editingCategoryId.value 
-      ? `http://localhost:8080/api/categories/${editingCategoryId.value}` 
-      : 'http://localhost:8080/api/categories';
+      ? `/api/categories/${editingCategoryId.value}` 
+      : '/api/categories';
     
     const method = editingCategoryId.value ? 'PUT' : 'POST';
     
@@ -1323,7 +1323,7 @@ const deleteCategory = async (categoryId) => {
     
     const userRole = currentUserRole.value;
     
-    const response = await fetch(`http://localhost:8080/api/categories/${categoryId}?userRole=${userRole}`, {
+    const response = await fetch(`/api/categories/${categoryId}?userRole=${userRole}`, {
       method: 'DELETE'
     });
     
@@ -1933,7 +1933,7 @@ const createCategory = async (name, type) => {
   try {
     const userId = getUserId();
 
-    const response = await fetch('http://localhost:8080/api/categories', {
+    const response = await fetch('/api/categories', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -1961,7 +1961,7 @@ const saveImportedBills = async (bills) => {
   
   for (const bill of bills) {
     try {
-      await fetch('http://localhost:8080/api/bills', {
+      await fetch('/api/bills', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

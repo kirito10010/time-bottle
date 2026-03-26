@@ -203,7 +203,7 @@ const truncateUrl = (url) => {
 const fetchCards = async () => {
   loading.value = true;
   try {
-    const response = await fetch('http://localhost:8080/api/cards');
+    const response = await fetch('/api/cards');
     if (response.ok) {
       cards.value = await response.json();
     } else {
@@ -255,8 +255,8 @@ const saveCard = async () => {
   saving.value = true;
   try {
     const url = isEditing.value 
-      ? `http://localhost:8080/api/cards/${editingCardId.value}`
-      : 'http://localhost:8080/api/cards';
+      ? `/api/cards/${editingCardId.value}`
+      : '/api/cards';
     const method = isEditing.value ? 'PUT' : 'POST';
     
     const response = await fetch(url, {
@@ -289,7 +289,7 @@ const deleteCard = (card) => {
     type: 'warning'
   }).then(async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/cards/${card.id}`, {
+      const response = await fetch(`/api/cards/${card.id}`, {
         method: 'DELETE'
       });
       if (response.ok) {

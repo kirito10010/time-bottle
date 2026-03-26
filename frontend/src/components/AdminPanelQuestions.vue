@@ -185,7 +185,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
-const API_BASE = 'http://localhost:8080/api/admin/questions';
+const API_BASE = '/api/admin/questions';
 
 const searchText = ref('');
 const currentPage = ref(0);

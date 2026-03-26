@@ -203,7 +203,7 @@ const drawCard = async (count) => {
   isMultiDraw.value = count > 1;
   
   try {
-    const response = await fetch('http://localhost:8080/api/cards/draw', {
+    const response = await fetch('/api/cards/draw', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
