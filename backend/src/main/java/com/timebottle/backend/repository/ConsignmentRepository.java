@@ -30,10 +30,16 @@ public interface ConsignmentRepository extends JpaRepository<Consignment, Long> 
     List<Consignment> findActiveBySellerId(@Param("sellerId") @NonNull Integer sellerId);
     
     @Query("SELECT c FROM Consignment c JOIN AnimeCard a ON c.cardId = a.id " +
-           "WHERE c.quantity > 0 AND (LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "OR LOWER(a.seriesName) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "WHERE c.quantity > 0 AND " +
+           "(:keyword IS NULL OR :keyword = '' OR LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(a.seriesName) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
+           "(:series IS NULL OR :series = '' OR a.seriesName = :series) AND " +
+           "(:rarity IS NULL OR a.rarityLevel = :rarity) " +
            "ORDER BY c.createdAt DESC")
-    Page<Consignment> searchByKeyword(@Param("keyword") String keyword, @NonNull Pageable pageable);
+    Page<Consignment> searchConsignments(
+        @Param("keyword") String keyword,
+        @Param("series") String series,
+        @Param("rarity") Integer rarity,
+        @NonNull Pageable pageable);
     
     @Query("SELECT c FROM Consignment c WHERE c.quantity > 0 AND c.unitPrice BETWEEN :minPrice AND :maxPrice ORDER BY c.unitPrice ASC")
     Page<Consignment> findByPriceRange(@Param("minPrice") @NonNull Integer minPrice, @Param("maxPrice") @NonNull Integer maxPrice, @NonNull Pageable pageable);

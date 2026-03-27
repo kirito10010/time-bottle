@@ -3,6 +3,15 @@
     <div class="header-container">
       <h2>我的图鉴</h2>
       <div class="filter-box">
+        <div class="search-bar">
+          <input 
+            type="text" 
+            v-model="searchKeyword" 
+            placeholder="搜索卡片名称或系列..."
+            @input="filterCards"
+          >
+          <button class="btn-search" @click="filterCards">搜索</button>
+        </div>
         <select v-model="selectedSeries" @change="filterCards">
           <option value="">全部系列</option>
           <option v-for="series in seriesList" :key="series" :value="series">{{ series }}</option>
@@ -23,22 +32,18 @@
       <div class="book-cover">
         <div class="book-inner">
           <div class="book-pages">
-            <div 
-              v-for="(page, pageIndex) in totalPages" 
-              :key="pageIndex"
-              class="book-page"
-              :class="{ 'active': currentPage === pageIndex }"
-            >
+            <div class="book-page active">
               <div class="page-content">
                 <div class="photo-grid">
                   <div 
-                    v-for="(card, index) in getPageCards(pageIndex)" 
+                    v-for="(card, index) in currentPageCards" 
                     :key="card.id"
                     class="photo-frame"
                     :class="[
                       card.owned ? 'owned' : '',
                       getRarityClass(card.rarityLevel)
                     ]"
+                    @click="card.owned && openCardModal(card)"
                   >
                     <div class="frame-border">
                       <span class="frame-corner tl"></span>
@@ -52,6 +57,8 @@
                         :src="card.imageUrl" 
                         :alt="card.name" 
                         class="photo-image"
+                        loading="lazy"
+                        decoding="async"
                       />
                       <div v-if="card.owned" class="quantity-badge">
                         <span class="badge-icon">✨</span>
@@ -114,6 +121,38 @@
         </div>
       </div>
     </div>
+    
+    <!-- 卡片放大弹窗 -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showCardModal" class="card-modal-overlay" @click="closeCardModal">
+          <div class="card-modal-container" @click.stop>
+            <button class="modal-close-btn" @click="closeCardModal">×</button>
+            <div class="modal-card-wrapper" :class="getRarityClass(selectedCard?.rarityLevel)">
+              <div class="modal-card-glow"></div>
+              <img 
+                :src="selectedCard?.imageUrl" 
+                :alt="selectedCard?.name" 
+                class="modal-card-image"
+              />
+            </div>
+            <div class="modal-card-info">
+              <h3 class="modal-card-name">{{ selectedCard?.name }}</h3>
+              <div class="modal-card-meta">
+                <span class="modal-card-series">{{ selectedCard?.seriesName }}</span>
+                <span class="modal-card-type" :class="getRarityClass(selectedCard?.rarityLevel)">
+                  {{ selectedCard?.type }}
+                </span>
+              </div>
+              <div class="modal-card-quantity">
+                <span class="quantity-label">拥有数量</span>
+                <span class="quantity-value">✨ x{{ selectedCard?.quantity }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -125,14 +164,23 @@ const cards = ref([]);
 const seriesList = ref([]);
 const selectedSeries = ref('');
 const selectedRarity = ref('');
+const searchKeyword = ref('');
 const totalCards = ref(0);
 const ownedCards = ref(0);
 const completionRate = ref(0);
 const currentPage = ref(0);
 const cardsPerPage = 24;
 
+const showCardModal = ref(false);
+const selectedCard = ref(null);
+
 const totalPages = computed(() => {
   return Math.ceil(cards.value.length / cardsPerPage) || 1;
+});
+
+const currentPageCards = computed(() => {
+  const start = currentPage.value * cardsPerPage;
+  return cards.value.slice(start, start + cardsPerPage);
 });
 
 const getRarityClass = (rarityLevel) => {
@@ -144,11 +192,6 @@ const getRarityClass = (rarityLevel) => {
     case 2: return 'uncommon';
     default: return 'common';
   }
-};
-
-const getPageCards = (pageIndex) => {
-  const start = pageIndex * cardsPerPage;
-  return cards.value.slice(start, start + cardsPerPage);
 };
 
 const prevPage = () => {
@@ -163,8 +206,28 @@ const nextPage = () => {
   }
 };
 
+const openCardModal = (card) => {
+  selectedCard.value = card;
+  showCardModal.value = true;
+  document.body.style.overflow = 'hidden';
+};
+
+const closeCardModal = () => {
+  showCardModal.value = false;
+  selectedCard.value = null;
+  document.body.style.overflow = '';
+};
+
 const filterCards = () => {
   let filtered = [...allCards.value];
+  
+  if (searchKeyword.value.trim()) {
+    const keyword = searchKeyword.value.toLowerCase().trim();
+    filtered = filtered.filter(card => 
+      card.name.toLowerCase().includes(keyword) || 
+      (card.seriesName && card.seriesName.toLowerCase().includes(keyword))
+    );
+  }
   
   if (selectedSeries.value) {
     filtered = filtered.filter(card => card.seriesName === selectedSeries.value);
@@ -268,7 +331,48 @@ onMounted(() => {
 .filter-box {
   display: flex;
   align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.search-bar input {
+  padding: 8px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #475569;
+  background: white;
+  min-width: 180px;
+  transition: all 0.2s ease;
+}
+
+.search-bar input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-search {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-search:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .filter-box select {
@@ -376,6 +480,7 @@ onMounted(() => {
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   background: linear-gradient(135deg, #fffef9 0%, #f5f0e6 100%);
   border-radius: 6px;
   padding: 16px;
@@ -385,6 +490,9 @@ onMounted(() => {
   position: relative;
   display: flex;
   flex-direction: column;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
 }
 
 .book-pages::before {
@@ -433,6 +541,7 @@ onMounted(() => {
   width: 100%;
   box-sizing: border-box;
   justify-content: flex-start;
+  will-change: transform;
 }
 
 .photo-frame {
@@ -443,10 +552,14 @@ onMounted(() => {
     0 1px 3px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   position: relative;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 4px;
   width: 180px;
   flex-shrink: 0;
+  will-change: transform;
+  transform: translateZ(0);
+  contain: layout style paint;
 }
 
 .photo-frame::before {
@@ -465,12 +578,21 @@ onMounted(() => {
 }
 
 .photo-frame:hover {
-  transform: translateY(-4px) rotate(-1deg) scale(1.02);
+  transform: translateY(-3px) translateZ(0);
   box-shadow: 
-    0 8px 20px rgba(0, 0, 0, 0.2),
-    0 4px 10px rgba(0, 0, 0, 0.12),
+    0 6px 16px rgba(0, 0, 0, 0.18),
+    0 3px 8px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   z-index: 10;
+}
+
+.photo-frame.owned {
+  cursor: pointer;
+}
+
+.photo-frame.owned:hover {
+  transform: translateY(-4px) scale(1.03) translateZ(0);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
 }
 
 .photo-frame.legendary {
@@ -929,5 +1051,291 @@ onMounted(() => {
   .stat-divider-v {
     height: 18px;
   }
+}
+
+/* 卡片放大弹窗样式 */
+.card-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(12px);
+}
+
+.card-modal-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 90vw;
+  max-height: 90vh;
+  animation: modalFadeIn 0.25s cubic-bezier(0.34, 1.56, 0.64);
+  will-change: transform, opacity;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: -50px;
+  right: -10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+  backdrop-filter: blur(10px);
+}
+
+.modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: rotate(90deg) scale(1.1);
+}
+
+.modal-card-wrapper {
+  position: relative;
+  width: 380px;
+  max-width: 85vw;
+  aspect-ratio: 3/4;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(145deg, #ffffff 0%, #f8f4ec 100%);
+  box-shadow: 
+    0 25px 80px rgba(0, 0, 0, 0.6),
+    0 15px 40px rgba(0, 0, 0, 0.4);
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.modal-card-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.3) 0%,
+    transparent 50%,
+    rgba(0, 0, 0, 0.05) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.modal-card-wrapper.legendary {
+  box-shadow: 
+    0 0 60px rgba(255, 215, 0, 0.9),
+    0 0 120px rgba(255, 215, 0, 0.6),
+    0 25px 80px rgba(0, 0, 0, 0.6);
+  animation: legendaryGlow 2s ease-in-out infinite alternate;
+}
+
+.modal-card-wrapper.epic {
+  box-shadow: 
+    0 0 50px rgba(168, 85, 247, 0.9),
+    0 0 100px rgba(168, 85, 247, 0.6),
+    0 25px 80px rgba(0, 0, 0, 0.6);
+  animation: epicGlow 2s ease-in-out infinite alternate;
+}
+
+.modal-card-wrapper.rare {
+  box-shadow: 
+    0 0 45px rgba(59, 130, 246, 0.9),
+    0 0 90px rgba(59, 130, 246, 0.6),
+    0 25px 80px rgba(0, 0, 0, 0.6);
+  animation: rareGlow 2s ease-in-out infinite alternate;
+}
+
+.modal-card-wrapper.uncommon {
+  box-shadow: 
+    0 0 40px rgba(34, 197, 94, 0.9),
+    0 0 80px rgba(34, 197, 94, 0.6),
+    0 25px 80px rgba(0, 0, 0, 0.6);
+  animation: uncommonGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes legendaryGlow {
+  from { box-shadow: 0 0 60px rgba(255, 215, 0, 0.9), 0 0 120px rgba(255, 215, 0, 0.6), 0 25px 80px rgba(0, 0, 0, 0.6); }
+  to { box-shadow: 0 0 80px rgba(255, 215, 0, 1), 0 0 160px rgba(255, 215, 0, 0.8), 0 25px 80px rgba(0, 0, 0, 0.6); }
+}
+
+@keyframes epicGlow {
+  from { box-shadow: 0 0 50px rgba(168, 85, 247, 0.9), 0 0 100px rgba(168, 85, 247, 0.6), 0 25px 80px rgba(0, 0, 0, 0.6); }
+  to { box-shadow: 0 0 70px rgba(168, 85, 247, 1), 0 0 140px rgba(168, 85, 247, 0.8), 0 25px 80px rgba(0, 0, 0, 0.6); }
+}
+
+@keyframes rareGlow {
+  from { box-shadow: 0 0 45px rgba(59, 130, 246, 0.9), 0 0 90px rgba(59, 130, 246, 0.6), 0 25px 80px rgba(0, 0, 0, 0.6); }
+  to { box-shadow: 0 0 65px rgba(59, 130, 246, 1), 0 0 130px rgba(59, 130, 246, 0.8), 0 25px 80px rgba(0, 0, 0, 0.6); }
+}
+
+@keyframes uncommonGlow {
+  from { box-shadow: 0 0 40px rgba(34, 197, 94, 0.9), 0 0 80px rgba(34, 197, 94, 0.6), 0 25px 80px rgba(0, 0, 0, 0.6); }
+  to { box-shadow: 0 0 55px rgba(34, 197, 94, 1), 0 0 110px rgba(34, 197, 94, 0.8), 0 25px 80px rgba(0, 0, 0, 0.6); }
+}
+
+.modal-card-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse at 50% 20%, rgba(255, 255, 255, 0.5) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.modal-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  will-change: transform;
+}
+
+.modal-card-info {
+  margin-top: 28px;
+  text-align: center;
+  color: white;
+  padding: 0 20px;
+}
+
+.modal-card-name {
+  font-size: 32px;
+  font-weight: 800;
+  margin: 0 0 16px 0;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  letter-spacing: 1px;
+}
+
+.modal-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.modal-card-series {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.12);
+  padding: 8px 20px;
+  border-radius: 25px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.modal-card-type {
+  font-size: 14px;
+  font-weight: 700;
+  padding: 8px 20px;
+  border-radius: 25px;
+  letter-spacing: 0.5px;
+}
+
+.modal-card-type.legendary {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  color: #451a03;
+  box-shadow: 0 4px 15px rgba(251, 191, 36, 0.5);
+}
+
+.modal-card-type.epic {
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 50%, #7c3aed 100%);
+  color: #2e1065;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.5);
+}
+
+.modal-card-type.rare {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
+  color: #1e3a8a;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.5);
+}
+
+.modal-card-type.uncommon {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%);
+  color: #022c22;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.5);
+}
+
+.modal-card-type.common {
+  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 50%, #4b5563 100%);
+  color: #1f2937;
+  box-shadow: 0 4px 15px rgba(107, 114, 128, 0.4);
+}
+
+.modal-card-quantity {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 14px 28px;
+  border-radius: 35px;
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.quantity-label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 500;
+}
+
+.quantity-value {
+  font-size: 22px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 弹窗过渡动画 */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.modal-enter-active .card-modal-container,
+.modal-leave-active .card-modal-container {
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64);
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .card-modal-container,
+.modal-leave-to .card-modal-container {
+  transform: scale(0.85) translateY(30px);
+  opacity: 0;
 }
 </style>

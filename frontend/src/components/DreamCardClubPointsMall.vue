@@ -16,9 +16,23 @@
 
     <div class="content-area">
       <div v-if="activeTab === 'market'" class="market-tab">
-        <div class="search-bar">
-          <input type="text" v-model="searchKeyword" placeholder="搜索卡片名称或系列..." @keyup.enter="searchConsignments">
-          <button class="btn-search" @click="searchConsignments">搜索</button>
+        <div class="filter-row">
+          <div class="search-bar">
+            <input type="text" v-model="searchKeyword" placeholder="搜索卡片名称或系列..." @keyup.enter="searchConsignments">
+            <button class="btn-search" @click="searchConsignments">搜索</button>
+          </div>
+          <select v-model="selectedSeries" @change="searchConsignments" class="filter-select">
+            <option value="">全部系列</option>
+            <option v-for="series in seriesList" :key="series" :value="series">{{ series }}</option>
+          </select>
+          <select v-model="selectedRarity" @change="searchConsignments" class="filter-select">
+            <option value="">全部稀有度</option>
+            <option value="1">普通</option>
+            <option value="2">精良</option>
+            <option value="3">稀有</option>
+            <option value="4">史诗</option>
+            <option value="5">传说</option>
+          </select>
         </div>
 
         <div class="items-grid" v-if="consignments.length > 0">
@@ -198,6 +212,9 @@ const refreshPoints = inject('refreshPoints', () => {});
 const userPoints = ref(0);
 const activeTab = ref('market');
 const searchKeyword = ref('');
+const selectedSeries = ref('');
+const selectedRarity = ref('');
+const seriesList = ref([]);
 
 const consignments = ref([]);
 const myConsignments = ref([]);
@@ -267,6 +284,8 @@ const fetchConsignments = async () => {
     params.append('page', currentPage.value);
     params.append('size', 12);
     if (searchKeyword.value) params.append('keyword', searchKeyword.value);
+    if (selectedSeries.value) params.append('series', selectedSeries.value);
+    if (selectedRarity.value) params.append('rarity', selectedRarity.value);
 
     const response = await fetch(`${API_BASE}?${params.toString()}`);
     const data = await response.json();
@@ -274,6 +293,10 @@ const fetchConsignments = async () => {
     consignments.value = data.items || [];
     currentPage.value = data.currentPage || 0;
     totalPages.value = data.totalPages || 0;
+    
+    if (data.seriesList) {
+      seriesList.value = data.seriesList;
+    }
   } catch (error) {
     console.error('获取商品列表失败:', error);
   }
@@ -535,32 +558,68 @@ onMounted(() => {
   min-height: 0;
 }
 
-.search-bar {
+.filter-row {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 20px;
 }
 
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .search-bar input {
-  flex: 1;
-  padding: 10px 16px;
+  padding: 8px 14px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   font-size: 14px;
+  color: #475569;
+  background: white;
+  min-width: 180px;
+  transition: all 0.2s ease;
 }
 
 .search-bar input:focus {
   outline: none;
   border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .btn-search {
-  padding: 10px 20px;
-  background: #667eea;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
   border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-search:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.filter-select {
+  padding: 8px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #475569;
+  background: white;
+  cursor: pointer;
+  min-width: 140px;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #667eea;
 }
 
 .items-grid {

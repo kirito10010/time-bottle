@@ -2,6 +2,7 @@ package com.timebottle.backend.controller;
 
 import com.timebottle.backend.entity.User;
 import com.timebottle.backend.service.UserService;
+import com.timebottle.backend.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -18,13 +19,36 @@ public class AdminController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    private boolean isAdmin(String token) {
+        if (token == null || token.isEmpty()) return false;
+        String cleanToken = token.replace("Bearer ", "");
+        Integer userId = jwtUtil.extractUserId(cleanToken);
+        if (userId == null) return false;
+        User user = userService.getUserById(userId).orElse(null);
+        return user != null && "1".equals(user.getRole());
+    }
+
+    private ResponseEntity<Map<String, Object>> forbiddenResponse() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "权限不足，仅管理员可访问");
+        return ResponseEntity.status(403).body(response);
+    }
+
     @GetMapping
     public ResponseEntity<?> getUsers(
+            @RequestHeader(value = "Authorization", required = false) String token,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        
+        if (!isAdmin(token)) {
+            return forbiddenResponse();
+        }
         
         Page<User> userPage = userService.getUsers(keyword, role, status, page, size);
         
@@ -55,7 +79,14 @@ public class AdminController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Integer id) {
+    public ResponseEntity<?> getUserById(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @PathVariable Integer id) {
+        
+        if (!isAdmin(token)) {
+            return forbiddenResponse();
+        }
+        
         return userService.getUserById(id)
                 .map(user -> {
                     Map<String, Object> userMap = new HashMap<>();
@@ -76,7 +107,15 @@ public class AdminController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateUser(@PathVariable Integer id, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<?> updateUser(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @PathVariable Integer id, 
+            @RequestBody Map<String, Object> request) {
+        
+        if (!isAdmin(token)) {
+            return forbiddenResponse();
+        }
+        
         try {
             String nickname = (String) request.get("nickname");
             String role = (String) request.get("role");
@@ -112,7 +151,14 @@ public class AdminController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable Integer id) {
+    public ResponseEntity<?> deleteUser(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @PathVariable Integer id) {
+        
+        if (!isAdmin(token)) {
+            return forbiddenResponse();
+        }
+        
         try {
             userService.deleteUser(id);
             Map<String, Object> response = new HashMap<>();
@@ -126,7 +172,14 @@ public class AdminController {
     }
 
     @DeleteMapping("/batch")
-    public ResponseEntity<?> deleteUsers(@RequestBody Map<String, List<Integer>> request) {
+    public ResponseEntity<?> deleteUsers(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @RequestBody Map<String, List<Integer>> request) {
+        
+        if (!isAdmin(token)) {
+            return forbiddenResponse();
+        }
+        
         try {
             List<Integer> ids = request.get("ids");
             if (ids == null || ids.isEmpty()) {

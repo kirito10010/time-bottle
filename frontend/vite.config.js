@@ -8,6 +8,14 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true
+      },
+      '/Usersimg': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      },
+      '/default-avatar.svg': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
       }
     }
   }

@@ -47,11 +47,12 @@ public class ConsignmentService {
         return consignmentRepository.findAvailable(PageRequest.of(page, size));
     }
 
-    public Page<Consignment> searchConsignments(String keyword, int page, int size) {
-        if (keyword == null || keyword.isEmpty()) {
-            return getAvailableConsignments(page, size);
-        }
-        return consignmentRepository.searchByKeyword(keyword, PageRequest.of(page, size));
+    public Page<Consignment> searchConsignments(String keyword, String series, Integer rarity, int page, int size) {
+        return consignmentRepository.searchConsignments(keyword, series, rarity, PageRequest.of(page, size));
+    }
+
+    public List<String> getAllSeriesNames() {
+        return animeCardRepository.findAllDistinctSeriesNames();
     }
 
     public List<Map<String, Object>> getConsignmentsWithCardInfo(Page<Consignment> consignmentPage) {

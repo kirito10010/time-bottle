@@ -66,7 +66,12 @@ public class UserService {
         if (nickname != null) user.setNickname(nickname);
         if (role != null) user.setRole(role);
         if (status != null) user.setStatus(status);
-        if (points != null) user.setPoints(points);
+        if (points != null) {
+            if (points < 0) {
+                throw new RuntimeException("积分不能为负数");
+            }
+            user.setPoints(points);
+        }
         return userRepository.save(user);
     }
 

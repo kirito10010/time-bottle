@@ -36,6 +36,14 @@ const showUserProfileEdit = ref(false);
 
 const toggleSidebar = () => {
   sidebarVisible.value = !sidebarVisible.value;
+  localStorage.setItem('sidebarVisible', sidebarVisible.value.toString());
+};
+
+const loadSidebarState = () => {
+  const saved = localStorage.getItem('sidebarVisible');
+  if (saved !== null) {
+    sidebarVisible.value = saved === 'true';
+  }
 };
 
 const toggleUserMenu = () => {
@@ -208,6 +216,7 @@ watch(() => route.path, () => {
 
 onMounted(() => {
   loadMenuState();
+  loadSidebarState();
   checkAuth();
   document.addEventListener('click', handleClickOutside);
 });

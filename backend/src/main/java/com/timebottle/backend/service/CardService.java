@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @SuppressWarnings("null")
@@ -37,6 +39,12 @@ public class CardService {
     @Autowired
     private PointsLogRepository pointsLogRepository;
 
+    private static final int MAX_DRAW_COUNT = 10;
+    private static final int SINGLE_DRAW_COST = 10;
+    private static final int TEN_DRAW_COST = 90;
+    
+    private final ConcurrentHashMap<Long, ReentrantLock> userDrawLocks = new ConcurrentHashMap<>();
+
     private static final Map<Integer, Double> RARITY_PROBABILITIES = new TreeMap<>();
     static {
         RARITY_PROBABILITIES.put(1, 0.40);
@@ -48,6 +56,10 @@ public class CardService {
 
     public List<AnimeCard> getAllCards() {
         return animeCardRepository.findAll();
+    }
+
+    public List<String> getAllSeriesNames() {
+        return animeCardRepository.findAllDistinctSeriesNames();
     }
 
     public Optional<AnimeCard> getCardById(@NonNull Long id) {
@@ -163,75 +175,37 @@ public class CardService {
 
     @Transactional
     public AnimeCard drawRandomCard(@NonNull Long uid) {
-        List<AnimeCard> allCards = animeCardRepository.findAll();
-        if (allCards.isEmpty()) {
-            throw new RuntimeException("卡片池为空，无法抽卡");
+        ReentrantLock userLock = userDrawLocks.computeIfAbsent(uid, k -> new ReentrantLock());
+        
+        if (!userLock.tryLock()) {
+            throw new RuntimeException("正在处理中，请勿重复操作");
         }
         
-        User user = userRepository.findById(uid.intValue()).orElseThrow(() -> new RuntimeException("用户不存在"));
-        if (user.getPoints() < 10) {
-            throw new RuntimeException("积分不足，单抽需要10积分");
-        }
-        
-        user.setPoints(user.getPoints() - 10);
-        userRepository.save(user);
-        
-        PointsLog log = new PointsLog();
-        log.setUserId(uid.intValue());
-        log.setChange(-10);
-        log.setType("draw");
-        log.setRemark("单抽消耗");
-        pointsLogRepository.save(log);
-        
-        Random random = new Random();
-        AnimeCard drawnCard = drawCardByRarity(allCards, random);
-        
-        Optional<UserCard> existingCard = userCardRepository.findByUidAndCardId(uid, drawnCard.getId());
-        if (existingCard.isPresent()) {
-            UserCard userCard = existingCard.get();
-            userCard.setQuantity(userCard.getQuantity() + 1);
-            userCardRepository.save(userCard);
-        } else {
-            UserCard userCard = new UserCard();
-            userCard.setUid(uid);
-            userCard.setCardId(drawnCard.getId());
-            userCard.setQuantity(1);
-            userCardRepository.save(userCard);
-        }
-        
-        return drawnCard;
-    }
-
-    @Transactional
-    public List<AnimeCard> drawMultipleCards(@NonNull Long uid, int count) {
-        List<AnimeCard> allCards = animeCardRepository.findAll();
-        if (allCards.isEmpty()) {
-            throw new RuntimeException("卡片池为空，无法抽卡");
-        }
-        
-        int cost = count == 10 ? 90 : count * 10;
-        
-        User user = userRepository.findById(uid.intValue()).orElseThrow(() -> new RuntimeException("用户不存在"));
-        if (user.getPoints() < cost) {
-            throw new RuntimeException("积分不足，十连抽需要90积分");
-        }
-        
-        user.setPoints(user.getPoints() - cost);
-        userRepository.save(user);
-        
-        PointsLog log = new PointsLog();
-        log.setUserId(uid.intValue());
-        log.setChange(-cost);
-        log.setType("draw");
-        log.setRemark(count + "连抽消耗");
-        pointsLogRepository.save(log);
-        
-        List<AnimeCard> drawnCards = new java.util.ArrayList<>();
-        Random random = new Random();
-        
-        for (int i = 0; i < count; i++) {
+        try {
+            List<AnimeCard> allCards = animeCardRepository.findAll();
+            if (allCards.isEmpty()) {
+                throw new RuntimeException("卡片池为空，无法抽卡");
+            }
+            
+            User user = userRepository.findById(uid.intValue())
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+            
+            if (user.getPoints() < SINGLE_DRAW_COST) {
+                throw new RuntimeException("积分不足，单抽需要" + SINGLE_DRAW_COST + "积分，当前积分：" + user.getPoints());
+            }
+            
+            user.setPoints(user.getPoints() - SINGLE_DRAW_COST);
+            userRepository.save(user);
+            
+            PointsLog log = new PointsLog();
+            log.setUserId(uid.intValue());
+            log.setChange(-SINGLE_DRAW_COST);
+            log.setType("draw");
+            log.setRemark("单抽消耗");
+            pointsLogRepository.save(log);
+            
+            Random random = new Random();
             AnimeCard drawnCard = drawCardByRarity(allCards, random);
-            drawnCards.add(drawnCard);
             
             Optional<UserCard> existingCard = userCardRepository.findByUidAndCardId(uid, drawnCard.getId());
             if (existingCard.isPresent()) {
@@ -245,9 +219,80 @@ public class CardService {
                 userCard.setQuantity(1);
                 userCardRepository.save(userCard);
             }
+            
+            return drawnCard;
+        } finally {
+            userLock.unlock();
+            userDrawLocks.remove(uid);
+        }
+    }
+
+    @Transactional
+    public List<AnimeCard> drawMultipleCards(@NonNull Long uid, int count) {
+        if (count <= 0) {
+            throw new RuntimeException("抽卡数量必须大于0");
+        }
+        if (count > MAX_DRAW_COUNT) {
+            throw new RuntimeException("单次最多抽" + MAX_DRAW_COUNT + "张卡");
         }
         
-        return drawnCards;
+        ReentrantLock userLock = userDrawLocks.computeIfAbsent(uid, k -> new ReentrantLock());
+        
+        if (!userLock.tryLock()) {
+            throw new RuntimeException("正在处理中，请勿重复操作");
+        }
+        
+        try {
+            List<AnimeCard> allCards = animeCardRepository.findAll();
+            if (allCards.isEmpty()) {
+                throw new RuntimeException("卡片池为空，无法抽卡");
+            }
+            
+            int cost = count == 10 ? TEN_DRAW_COST : count * SINGLE_DRAW_COST;
+            
+            User user = userRepository.findById(uid.intValue())
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+            
+            if (user.getPoints() < cost) {
+                throw new RuntimeException("积分不足，需要" + cost + "积分，当前积分：" + user.getPoints());
+            }
+            
+            user.setPoints(user.getPoints() - cost);
+            userRepository.save(user);
+            
+            PointsLog log = new PointsLog();
+            log.setUserId(uid.intValue());
+            log.setChange(-cost);
+            log.setType("draw");
+            log.setRemark(count + "连抽消耗");
+            pointsLogRepository.save(log);
+            
+            List<AnimeCard> drawnCards = new java.util.ArrayList<>();
+            Random random = new Random();
+            
+            for (int i = 0; i < count; i++) {
+                AnimeCard drawnCard = drawCardByRarity(allCards, random);
+                drawnCards.add(drawnCard);
+                
+                Optional<UserCard> existingCard = userCardRepository.findByUidAndCardId(uid, drawnCard.getId());
+                if (existingCard.isPresent()) {
+                    UserCard userCard = existingCard.get();
+                    userCard.setQuantity(userCard.getQuantity() + 1);
+                    userCardRepository.save(userCard);
+                } else {
+                    UserCard userCard = new UserCard();
+                    userCard.setUid(uid);
+                    userCard.setCardId(drawnCard.getId());
+                    userCard.setQuantity(1);
+                    userCardRepository.save(userCard);
+                }
+            }
+            
+            return drawnCards;
+        } finally {
+            userLock.unlock();
+            userDrawLocks.remove(uid);
+        }
     }
 
     public List<Map<String, Object>> getAlbumData(@NonNull Long uid) {

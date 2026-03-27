@@ -26,10 +26,12 @@ public class ConsignmentController {
     @GetMapping
     public ResponseEntity<?> getConsignments(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String series,
+            @RequestParam(required = false) Integer rarity,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size) {
         
-        Page<Consignment> consignmentPage = consignmentService.searchConsignments(keyword, page, size);
+        Page<Consignment> consignmentPage = consignmentService.searchConsignments(keyword, series, rarity, page, size);
         List<Map<String, Object>> items = consignmentService.getConsignmentsWithCardInfo(consignmentPage);
         
         Map<String, Object> response = new HashMap<>();
@@ -37,8 +39,15 @@ public class ConsignmentController {
         response.put("currentPage", consignmentPage.getNumber());
         response.put("totalPages", consignmentPage.getTotalPages());
         response.put("totalElements", consignmentPage.getTotalElements());
+        response.put("seriesList", consignmentService.getAllSeriesNames());
         
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/series")
+    public ResponseEntity<?> getAllSeries() {
+        List<String> seriesList = consignmentService.getAllSeriesNames();
+        return ResponseEntity.ok(seriesList);
     }
 
     @GetMapping("/my")
