@@ -289,9 +289,15 @@ const closeEditModal = () => {
 
 const saveUser = async () => {
   try {
+    const token = localStorage.getItem('token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(`${API_BASE}/${editingUser.value.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(editForm.value)
     });
     
@@ -321,9 +327,15 @@ const toggleUserStatus = async (user) => {
     });
     
     const newStatus = user.status === '1' ? '0' : '1';
+    const token = localStorage.getItem('token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(`${API_BASE}/${user.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ status: newStatus })
     });
     
@@ -350,8 +362,15 @@ const deleteUser = async (user) => {
       type: 'error'
     });
     
+    const token = localStorage.getItem('token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(`${API_BASE}/${user.id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers
     });
     
     const data = await response.json();
@@ -382,9 +401,15 @@ const batchDeleteUsers = async () => {
       type: 'error'
     });
     
+    const token = localStorage.getItem('token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const response = await fetch(`${API_BASE}/batch`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ ids: selectedUsers.value })
     });
     
