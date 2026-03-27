@@ -12,11 +12,11 @@
       <div class="probability-info">
         <span class="prob-title">概率公示</span>
         <div class="prob-items">
-          <span class="prob-item legendary">传说 5%</span>
-          <span class="prob-item epic">史诗 10%</span>
-          <span class="prob-item rare">稀有 15%</span>
-          <span class="prob-item uncommon">精良 30%</span>
-          <span class="prob-item common">普通 40%</span>
+          <span class="prob-item legendary">传说 1%</span>
+          <span class="prob-item epic">史诗 2%</span>
+          <span class="prob-item rare">稀有 7%</span>
+          <span class="prob-item uncommon">精良 20%</span>
+          <span class="prob-item common">普通 70%</span>
         </div>
       </div>
       

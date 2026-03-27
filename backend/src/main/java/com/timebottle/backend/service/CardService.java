@@ -47,11 +47,11 @@ public class CardService {
 
     private static final Map<Integer, Double> RARITY_PROBABILITIES = new TreeMap<>();
     static {
-        RARITY_PROBABILITIES.put(1, 0.40);
-        RARITY_PROBABILITIES.put(2, 0.30);
-        RARITY_PROBABILITIES.put(3, 0.15);
-        RARITY_PROBABILITIES.put(4, 0.10);
-        RARITY_PROBABILITIES.put(5, 0.05);
+        RARITY_PROBABILITIES.put(1, 0.70);
+        RARITY_PROBABILITIES.put(2, 0.20);
+        RARITY_PROBABILITIES.put(3, 0.07);
+        RARITY_PROBABILITIES.put(4, 0.02);
+        RARITY_PROBABILITIES.put(5, 0.01);
     }
 
     public List<AnimeCard> getAllCards() {

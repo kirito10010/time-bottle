@@ -102,11 +102,11 @@
                   <div class="form-group">
                     <label>稀有度级别 <span class="required">*</span></label>
                     <select v-model="cardForm.rarityLevel" required>
-                      <option :value="1">1 - 普通 (40%)</option>
-                      <option :value="2">2 - 稀有 (30%)</option>
-                      <option :value="3">3 - 超稀有 (15%)</option>
-                      <option :value="4">4 - 史诗 (10%)</option>
-                      <option :value="5">5 - 传说 (5%)</option>
+                      <option :value="1">1 - 普通 (70%)</option>
+                      <option :value="2">2 - 精良 (20%)</option>
+                      <option :value="3">3 - 稀有 (7%)</option>
+                      <option :value="4">4 - 史诗 (2%)</option>
+                      <option :value="5">5 - 传说 (1%)</option>
                     </select>
                   </div>
                 </div>

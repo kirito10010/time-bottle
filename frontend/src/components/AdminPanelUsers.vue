@@ -212,7 +212,12 @@ const fetchUsers = async () => {
     if (filterRole.value) params.append('role', filterRole.value);
     if (filterStatus.value) params.append('status', filterStatus.value);
 
-    const response = await fetch(`${API_BASE}?${params.toString()}`);
+    const token = localStorage.getItem('token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_BASE}?${params.toString()}`, { headers });
     const data = await response.json();
     
     users.value = data.users || [];

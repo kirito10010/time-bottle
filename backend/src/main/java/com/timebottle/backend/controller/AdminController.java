@@ -28,7 +28,7 @@ public class AdminController {
         Integer userId = jwtUtil.extractUserId(cleanToken);
         if (userId == null) return false;
         User user = userService.getUserById(userId).orElse(null);
-        return user != null && "1".equals(user.getRole());
+        return user != null && "2".equals(user.getRole());
     }
 
     private ResponseEntity<Map<String, Object>> forbiddenResponse() {
