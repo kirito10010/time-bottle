@@ -24,6 +24,10 @@
           <option value="4">史诗</option>
           <option value="5">传说</option>
         </select>
+        <label class="checkbox-wrapper">
+          <input type="checkbox" v-model="showOnlyUnowned" @change="filterCards">
+          <span class="checkbox-label">只显示未收录</span>
+        </label>
       </div>
     </div>
     
@@ -165,6 +169,7 @@ const seriesList = ref([]);
 const selectedSeries = ref('');
 const selectedRarity = ref('');
 const searchKeyword = ref('');
+const showOnlyUnowned = ref(false);
 const totalCards = ref(0);
 const ownedCards = ref(0);
 const completionRate = ref(0);
@@ -235,6 +240,10 @@ const filterCards = () => {
   
   if (selectedRarity.value) {
     filtered = filtered.filter(card => card.rarityLevel === parseInt(selectedRarity.value));
+  }
+  
+  if (showOnlyUnowned.value) {
+    filtered = filtered.filter(card => !card.owned);
   }
   
   cards.value = filtered;
@@ -389,6 +398,37 @@ onMounted(() => {
 .filter-box select:focus {
   outline: none;
   border-color: #667eea;
+}
+
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  color: #475569;
+}
+
+.checkbox-wrapper:hover {
+  border-color: #667eea;
+  background: #f8fafc;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.checkbox-label {
+  font-weight: 500;
 }
 
 .description {

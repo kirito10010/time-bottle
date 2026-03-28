@@ -32,6 +32,15 @@ public class BillService {
     @Transactional
     public Bill create(@NonNull Integer userId, Integer categoryId, Integer type, String account, BigDecimal amount, 
                       LocalDate billDate, LocalTime billTime, String remark) {
+        List<Bill> todayBills = billRepository.findByUserIdAndBillDateAndIsDeleted(userId, billDate, "0");
+        int todayCount = todayBills.size();
+        
+        if (todayCount >= 10) {
+            int extraCount = todayCount - 10 + 1;
+            int deductPoints = extraCount * 20;
+            pointsService.deductPoints(userId, deductPoints, "记账超额扣减 - 今日第" + (todayCount + 1) + "条记录");
+        }
+        
         Bill bill = new Bill();
         bill.setUserId(userId);
         bill.setCategoryId(categoryId);

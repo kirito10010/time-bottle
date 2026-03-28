@@ -100,6 +100,24 @@ public class PointsService {
         userRepository.save(user);
     }
 
+    @Transactional
+    public void deductPoints(@NonNull Integer userId, int points, String remark) {
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) return;
+        User user = userOpt.get();
+
+        PointsLog log = new PointsLog();
+        log.setUserId(userId);
+        log.setChange(-points);
+        log.setType("accounting");
+        log.setRemark(remark);
+        pointsLogRepository.save(log);
+
+        user.setPoints(Math.max(0, user.getPoints() - points));
+        user.setUpdatedAt(new Date());
+        userRepository.save(user);
+    }
+
     public boolean hasSignedInToday(@NonNull Integer userId) {
         List<PointsLog> todayLogs = pointsLogRepository.findTodaySignInLog(userId, "sign_in");
         return !todayLogs.isEmpty();

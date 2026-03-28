@@ -7,26 +7,27 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    @Value("${app.upload.avatar-path:./uploads/avatars}")
+    @Value("${app.upload.avatar-path:uploads/avatars}")
     private String avatarPath;
 
     @Override
     public void addResourceHandlers(@NonNull ResourceHandlerRegistry registry) {
-        // 确保目录存在
-        File uploadDir = new File(avatarPath);
+        Path path = Paths.get(avatarPath).toAbsolutePath();
+        File uploadDir = path.toFile();
+        
         if (!uploadDir.exists()) {
             uploadDir.mkdirs();
         }
 
-        // 获取绝对路径
         String absolutePath = uploadDir.getAbsolutePath();
 
-        // 映射 /Usersimg/** 到上传目录
         registry.addResourceHandler("/Usersimg/**")
-                .addResourceLocations("file:" + absolutePath + "/");
+                .addResourceLocations("file:" + absolutePath + File.separator);
     }
 }
