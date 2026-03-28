@@ -4,6 +4,7 @@ import com.timebottle.backend.entity.AnimeCard;
 import com.timebottle.backend.service.CardService;
 import com.timebottle.backend.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
@@ -23,9 +24,18 @@ public class CardController {
     private JwtUtil jwtUtil;
 
     @GetMapping
-    public ResponseEntity<List<AnimeCard>> getAllCards() {
-        List<AnimeCard> cards = cardService.getAllCards();
-        return ResponseEntity.ok(cards);
+    public ResponseEntity<?> getAllCards(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<AnimeCard> cardPage = cardService.getCardsPage(page, size);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("items", cardPage.getContent());
+        response.put("currentPage", cardPage.getNumber());
+        response.put("totalPages", cardPage.getTotalPages());
+        response.put("totalElements", cardPage.getTotalElements());
+        
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")

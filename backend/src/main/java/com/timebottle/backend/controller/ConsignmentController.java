@@ -181,6 +181,37 @@ public class ConsignmentController {
         }
     }
 
+    @PostMapping("/recycle")
+    public ResponseEntity<?> recycleCard(
+            @RequestHeader("Authorization") String token,
+            @RequestBody Map<String, Object> request) {
+        Integer userId = extractUserId(token);
+        if (userId == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "请先登录");
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        try {
+            Long cardId = ((Number) request.get("cardId")).longValue();
+            Integer quantity = ((Number) request.get("quantity")).intValue();
+            
+            int earnedPoints = consignmentService.recycleCard(userId, cardId, quantity);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "回收成功，获得 " + earnedPoints + " 积分");
+            response.put("earnedPoints", earnedPoints);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
     private Integer extractUserId(String token) {
         if (token == null || token.isEmpty()) return null;
         String cleanToken = token.replace("Bearer ", "");

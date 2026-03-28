@@ -796,7 +796,7 @@ onMounted(() => {
 
 .user-selector {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 8px;
   max-height: 280px;
   overflow-y: auto;
@@ -805,20 +805,18 @@ onMounted(() => {
 .user-selector .user-item {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 6px 10px;
   border: 2px solid #e2e8f0;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
   background: white;
-  width: fit-content;
-  max-width: 100%;
 }
 
 .user-selector .user-item:hover {
   border-color: #3b82f6;
-  transform: translateX(4px);
+  transform: translateY(-2px);
 }
 
 .user-selector .user-item.selected {
@@ -828,8 +826,8 @@ onMounted(() => {
 }
 
 .user-selector .user-avatar {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -840,16 +838,15 @@ onMounted(() => {
 
 .user-selector .user-name {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
   color: #1a202c;
   font-weight: 500;
 }
 
 .user-selector .user-id {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   color: #94a3b8;
-  margin-top: 2px;
 }
 
 .gift-preview {

@@ -26,7 +26,7 @@
         </select>
         <label class="checkbox-wrapper">
           <input type="checkbox" v-model="showOnlyUnowned" @change="filterCards">
-          <span class="checkbox-label">只显示未收录</span>
+          <span class="checkbox-label">未收录</span>
         </label>
       </div>
     </div>
@@ -64,10 +64,7 @@
                         loading="lazy"
                         decoding="async"
                       />
-                      <div v-if="card.owned" class="quantity-badge">
-                        <span class="badge-icon">✨</span>
-                        x{{ card.quantity }}
-                      </div>
+                      <div v-if="card.owned" class="quantity-badge">x{{ card.quantity }}</div>
                       <div v-if="!card.owned" class="lock-overlay">
                         <span class="lock-icon">?</span>
                       </div>
@@ -841,25 +838,14 @@ onMounted(() => {
   position: absolute;
   top: 8px;
   right: 8px;
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
-  color: #451a03;
-  font-size: 12px;
-  font-weight: 800;
-  padding: 4px 10px;
-  border-radius: 16px;
-  box-shadow: 
-    0 3px 10px rgba(217, 119, 6, 0.5),
-    0 1px 3px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.65);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 10px;
   z-index: 4;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border: 2px solid #fef3c7;
-}
-
-.badge-icon {
-  font-size: 10px;
+  backdrop-filter: blur(4px);
 }
 
 .lock-overlay {

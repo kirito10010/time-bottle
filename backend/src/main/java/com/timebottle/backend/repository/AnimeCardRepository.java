@@ -1,6 +1,8 @@
 package com.timebottle.backend.repository;
 
 import com.timebottle.backend.entity.AnimeCard;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -15,4 +17,7 @@ public interface AnimeCardRepository extends JpaRepository<AnimeCard, Long> {
     
     @Query("SELECT DISTINCT a.seriesName FROM AnimeCard a ORDER BY a.seriesName")
     List<String> findAllDistinctSeriesNames();
+    
+    Page<AnimeCard> findAllByOrderByIdDesc(Pageable pageable);
+    long count();
 }

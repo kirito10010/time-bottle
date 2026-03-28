@@ -11,7 +11,7 @@
     
     <div v-if="activeTab === 'cards'" class="cards-section">
       <div class="section-header">
-        <h3>卡片列表 (共 {{ cards.length }} 张)</h3>
+        <h3>卡片列表 (共 {{ totalCards }} 张)</h3>
         <button class="btn-add" @click="openAddModal">+ 添加卡片</button>
       </div>
       
@@ -21,24 +21,32 @@
         <p>暂无卡片，点击上方按钮添加</p>
       </div>
       
-      <div v-else class="cards-grid">
-        <div v-for="card in cards" :key="card.id" class="card-item">
-          <div class="card-preview" :class="getRarityClass(card.type)">
-            <img v-if="card.imageUrl" :src="card.imageUrl" :alt="card.name" class="card-image">
-            <span v-else class="card-emoji">🎴</span>
-          </div>
-          <div class="card-details">
-            <h4>{{ card.name }}</h4>
-            <p class="card-series">{{ card.seriesName }}</p>
-            <p class="card-rarity" :class="getRarityClass(card.rarityLevel)">{{ card.type }}</p>
-            <p class="card-url">{{ truncateUrl(card.imageUrl) }}</p>
-          </div>
-          <div class="card-actions">
-            <button class="btn-edit" @click="openEditModal(card)">编辑</button>
-            <button class="btn-delete" @click="deleteCard(card)">删除</button>
+      <template v-else>
+        <div class="cards-grid">
+          <div v-for="card in cards" :key="card.id" class="card-item">
+            <div class="card-preview" :class="getRarityClass(card.type)">
+              <img v-if="card.imageUrl" :src="card.imageUrl" :alt="card.name" class="card-image">
+              <span v-else class="card-emoji">🎴</span>
+            </div>
+            <div class="card-details">
+              <h4>{{ card.name }}</h4>
+              <p class="card-series">{{ card.seriesName }}</p>
+              <p class="card-rarity" :class="getRarityClass(card.rarityLevel)">{{ card.type }}</p>
+              <p class="card-url">{{ truncateUrl(card.imageUrl) }}</p>
+            </div>
+            <div class="card-actions">
+              <button class="btn-edit" @click="openEditModal(card)">编辑</button>
+              <button class="btn-delete" @click="deleteCard(card)">删除</button>
+            </div>
           </div>
         </div>
-      </div>
+        
+        <div class="pagination" v-if="totalPages > 1">
+          <button :disabled="currentPage === 0" @click="changePage(currentPage - 1)">上一页</button>
+          <span class="page-info">{{ currentPage + 1 }} / {{ totalPages }}</span>
+          <button :disabled="currentPage >= totalPages - 1" @click="changePage(currentPage + 1)">下一页</button>
+        </div>
+      </template>
     </div>
     
     <div v-else class="packs-section">
@@ -151,6 +159,10 @@ const saving = ref(false);
 const imageLoadError = ref(false);
 
 const cards = ref([]);
+const currentPage = ref(0);
+const totalPages = ref(0);
+const totalCards = ref(0);
+const pageSize = 10;
 const editingCardId = ref(null);
 
 const cardForm = ref({
@@ -203,9 +215,13 @@ const truncateUrl = (url) => {
 const fetchCards = async () => {
   loading.value = true;
   try {
-    const response = await fetch('/api/cards');
+    const response = await fetch(`/api/cards?page=${currentPage.value}&size=${pageSize}`);
     if (response.ok) {
-      cards.value = await response.json();
+      const data = await response.json();
+      cards.value = data.items || [];
+      currentPage.value = data.currentPage || 0;
+      totalPages.value = data.totalPages || 0;
+      totalCards.value = data.totalElements || 0;
     } else {
       ElMessage.error('获取卡片列表失败');
     }
@@ -215,6 +231,11 @@ const fetchCards = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const changePage = (page) => {
+  currentPage.value = page;
+  fetchCards();
 };
 
 const openAddModal = () => {
@@ -328,6 +349,10 @@ onMounted(() => {
 <style scoped>
 .admin-cards-container {
   padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .header-container {
@@ -376,6 +401,14 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
+.cards-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .section-header h3 {
   margin: 0;
   color: #334155;
@@ -406,6 +439,28 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 8px;
+}
+
+.cards-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cards-grid::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.cards-grid::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.cards-grid::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .card-item {
@@ -841,5 +896,41 @@ onMounted(() => {
 .pack-actions {
   display: flex;
   gap: 8px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.pagination button {
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #3b82f6;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  color: #64748b;
+  font-size: 14px;
 }
 </style>

@@ -12,6 +12,7 @@
       <button :class="{ active: activeTab === 'market' }" @click="switchTab('market')">商城</button>
       <button :class="{ active: activeTab === 'my-listings' }" @click="switchTab('my-listings')">我的上架</button>
       <button :class="{ active: activeTab === 'sell' }" @click="switchTab('sell')">上架卡片</button>
+      <button :class="{ active: activeTab === 'recycle' }" @click="switchTab('recycle')">♻️ 回收站</button>
     </div>
 
     <div class="content-area">
@@ -167,6 +168,81 @@
           <p>您没有可上架的卡片</p>
         </div>
       </div>
+
+      <div v-if="activeTab === 'recycle'" class="recycle-tab">
+        <div class="recycle-info">
+          <h4>♻️ 卡片回收站</h4>
+          <p class="recycle-desc">将不需要的卡片回收换取积分</p>
+          <div class="recycle-rates">
+            <div class="rate-item">
+              <span class="rate-label">普通卡</span>
+              <span class="rate-value">2 积分/张</span>
+            </div>
+            <div class="rate-item">
+              <span class="rate-label">精良卡</span>
+              <span class="rate-value">8 积分/张</span>
+            </div>
+            <div class="rate-item">
+              <span class="rate-label">稀有卡</span>
+              <span class="rate-value">14 积分/张</span>
+            </div>
+            <div class="rate-item">
+              <span class="rate-label">史诗卡</span>
+              <span class="rate-value">40 积分/张</span>
+            </div>
+            <div class="rate-item legendary">
+              <span class="rate-label">传说卡</span>
+              <span class="rate-value">200 积分/张</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="filter-row">
+          <div class="search-bar">
+            <input type="text" v-model="recycleSearchKeyword" placeholder="搜索卡片名称或系列..." @keyup.enter="searchRecyclableCards">
+            <button class="btn-search" @click="searchRecyclableCards">搜索</button>
+          </div>
+          <select v-model="recycleSelectedSeries" @change="searchRecyclableCards" class="filter-select">
+            <option value="">全部系列</option>
+            <option v-for="series in seriesList" :key="series" :value="series">{{ series }}</option>
+          </select>
+          <select v-model="recycleSelectedRarity" @change="searchRecyclableCards" class="filter-select">
+            <option value="">全部稀有度</option>
+            <option value="1">普通</option>
+            <option value="2">精良</option>
+            <option value="3">稀有</option>
+            <option value="4">史诗</option>
+            <option value="5">传说</option>
+          </select>
+        </div>
+        
+        <div class="items-grid" v-if="recyclableCards.length > 0">
+          <div v-for="card in recyclableCards" :key="card.cardId" class="item-card recycle-item">
+            <div class="card-image-wrapper" :class="getRarityClass(card.rarityLevel)">
+              <img :src="card.imageUrl" :alt="card.name" class="card-image">
+              <div class="quantity-badge">x{{ card.quantity }}</div>
+            </div>
+            <div class="item-info">
+              <div class="info-header">
+                <h4 class="card-name">{{ card.name }}</h4>
+                <span class="card-type" :class="getRarityClass(card.rarityLevel)">{{ card.type }}</span>
+              </div>
+              <div class="info-row">
+                <span class="card-series">{{ card.seriesName }}</span>
+              </div>
+              <div class="recycle-info-row">
+                <span class="recycle-price">{{ getRecyclePrice(card.rarityLevel) }} 积分/张</span>
+              </div>
+              <button class="btn-recycle" @click="openRecycleModal(card)">回收</button>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="empty-state">
+          <span class="empty-icon">♻️</span>
+          <p>您没有可回收的卡片</p>
+        </div>
+      </div>
     </div>
 
     <Teleport to="body">
@@ -245,6 +321,46 @@
         </div>
       </div>
     </Teleport>
+
+    <Teleport to="body">
+      <div v-if="showRecycleModal" class="modal-overlay" 
+        @mousedown="handleOverlayMouseDown" 
+        @mouseup="handleOverlayMouseUp($event, closeRecycleModal)">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>回收卡片</h3>
+            <button class="close-btn" @click="closeRecycleModal">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="recycle-card-preview" v-if="selectedRecycleCard">
+              <img :src="selectedRecycleCard.imageUrl" :alt="selectedRecycleCard.name">
+              <div class="recycle-card-info">
+                <h4>{{ selectedRecycleCard.name }}</h4>
+                <p>{{ selectedRecycleCard.seriesName }}</p>
+                <p class="recycle-unit-price">回收价: {{ getRecyclePrice(selectedRecycleCard.rarityLevel) }} 积分/张</p>
+                <p class="owned-quantity">拥有: {{ selectedRecycleCard.quantity }} 张</p>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>回收数量</label>
+              <div class="quantity-input">
+                <button @click="recycleQuantity = Math.max(1, recycleQuantity - 1)">-</button>
+                <input type="number" v-model.number="recycleQuantity" min="1" :max="selectedRecycleCard?.quantity">
+                <button @click="recycleQuantity = Math.min(selectedRecycleCard?.quantity || 1, recycleQuantity + 1)">+</button>
+              </div>
+            </div>
+            <div class="recycle-total">
+              <span>总计可获得:</span>
+              <span class="total-points">{{ getRecyclePrice(selectedRecycleCard?.rarityLevel) * recycleQuantity }} 积分</span>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-cancel" @click="closeRecycleModal">取消</button>
+            <button class="btn-confirm recycle-btn" @click="recycleCard">确认回收</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -270,19 +386,27 @@ const sellSearchKeyword = ref('');
 const sellSelectedSeries = ref('');
 const sellSelectedRarity = ref('');
 
+const recycleSearchKeyword = ref('');
+const recycleSelectedSeries = ref('');
+const recycleSelectedRarity = ref('');
+
 const consignments = ref([]);
 const myConsignments = ref([]);
 const sellableCards = ref([]);
+const recyclableCards = ref([]);
 
 const currentPage = ref(0);
 const totalPages = ref(0);
 
 const showBuyModal = ref(false);
 const showSellModal = ref(false);
+const showRecycleModal = ref(false);
 const selectedItem = ref(null);
 const selectedCard = ref(null);
+const selectedRecycleCard = ref(null);
 const buyQuantity = ref(1);
 const sellQuantity = ref(1);
+const recycleQuantity = ref(1);
 const sellPrice = ref(10);
 const mouseDownOnOverlay = ref(false);
 
@@ -312,6 +436,8 @@ const switchTab = (tab) => {
     fetchMyConsignments();
   } else if (tab === 'sell') {
     fetchSellableCards();
+  } else if (tab === 'recycle') {
+    fetchRecyclableCards();
   }
 };
 
@@ -428,6 +554,96 @@ const searchMyListings = () => {
 
 const searchSellableCards = () => {
   fetchSellableCards();
+};
+
+const getRecyclePrice = (rarityLevel) => {
+  switch (rarityLevel) {
+    case 5: return 200;
+    case 4: return 40;
+    case 3: return 14;
+    case 2: return 8;
+    default: return 2;
+  }
+};
+
+const fetchRecyclableCards = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
+  try {
+    const params = new URLSearchParams();
+    if (recycleSearchKeyword.value) params.append('keyword', recycleSearchKeyword.value);
+    if (recycleSelectedSeries.value) params.append('series', recycleSelectedSeries.value);
+    if (recycleSelectedRarity.value) params.append('rarity', recycleSelectedRarity.value);
+
+    const url = params.toString() 
+      ? `${API_BASE}/sellable?${params.toString()}` 
+      : `${API_BASE}/sellable`;
+    
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json();
+    recyclableCards.value = data.items || [];
+    
+    if (data.seriesList) {
+      seriesList.value = data.seriesList;
+    }
+  } catch (error) {
+    console.error('获取可回收卡片失败:', error);
+  }
+};
+
+const searchRecyclableCards = () => {
+  fetchRecyclableCards();
+};
+
+const openRecycleModal = (card) => {
+  selectedRecycleCard.value = card;
+  recycleQuantity.value = 1;
+  showRecycleModal.value = true;
+};
+
+const closeRecycleModal = () => {
+  showRecycleModal.value = false;
+  selectedRecycleCard.value = null;
+};
+
+const recycleCard = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    ElMessage.warning('请先登录');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/recycle`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        cardId: selectedRecycleCard.value.cardId,
+        quantity: recycleQuantity.value
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      ElMessage.success(`回收成功！获得 ${data.earnedPoints} 积分`);
+      closeRecycleModal();
+      fetchRecyclableCards();
+      fetchUserPoints();
+      refreshPoints();
+    } else {
+      ElMessage.error(data.message || '回收失败');
+    }
+  } catch (error) {
+    console.error('回收失败:', error);
+    ElMessage.error('网络错误');
+  }
 };
 
 const openBuyModal = (item) => {
@@ -1109,5 +1325,173 @@ onMounted(() => {
   border: none;
   border-radius: 8px;
   cursor: pointer;
+}
+
+.recycle-tab {
+  padding: 20px 0;
+}
+
+.recycle-info {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.recycle-info h4 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #059669;
+}
+
+.recycle-desc {
+  margin: 0 0 16px 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.recycle-rates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.rate-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #d1fae5;
+}
+
+.rate-item.legendary {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #fbbf24;
+}
+
+.rate-label {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.rate-value {
+  font-size: 14px;
+  color: #059669;
+  font-weight: 700;
+}
+
+.rate-item.legendary .rate-value {
+  color: #b45309;
+}
+
+.recycle-item {
+  position: relative;
+}
+
+.quantity-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+}
+
+.recycle-info-row {
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.recycle-price {
+  font-size: 12px;
+  color: #059669;
+  font-weight: 600;
+}
+
+.btn-recycle {
+  width: 100%;
+  padding: 8px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-recycle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.recycle-card-preview {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.recycle-card-preview img {
+  width: 80px;
+  height: 106px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.recycle-card-info h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.recycle-card-info p {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.recycle-unit-price {
+  font-weight: 600;
+  color: #059669 !important;
+}
+
+.recycle-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f0fdf4;
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.recycle-total span:first-child {
+  font-size: 14px;
+  color: #475569;
+}
+
+.total-points {
+  font-size: 20px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.recycle-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+}
+
+.recycle-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 </style>

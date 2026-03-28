@@ -9,6 +9,8 @@ import com.timebottle.backend.repository.PointsLogRepository;
 import com.timebottle.backend.repository.UserCardRepository;
 import com.timebottle.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +58,14 @@ public class CardService {
 
     public List<AnimeCard> getAllCards() {
         return animeCardRepository.findAll();
+    }
+
+    public Page<AnimeCard> getCardsPage(int page, int size) {
+        return animeCardRepository.findAllByOrderByIdDesc(PageRequest.of(page, size));
+    }
+
+    public long getTotalCardCount() {
+        return animeCardRepository.count();
     }
 
     public List<String> getAllSeriesNames() {
