@@ -51,7 +51,11 @@ public class ConsignmentController {
     }
 
     @GetMapping("/my")
-    public ResponseEntity<?> getMyConsignments(@RequestHeader(value = "Authorization", required = false) String token) {
+    public ResponseEntity<?> getMyConsignments(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String series,
+            @RequestParam(required = false) Integer rarity) {
         Integer userId = extractUserId(token);
         if (userId == null) {
             Map<String, Object> response = new HashMap<>();
@@ -59,14 +63,19 @@ public class ConsignmentController {
             return ResponseEntity.ok(response);
         }
         
-        List<Map<String, Object>> items = consignmentService.getMyConsignments(userId);
+        List<Map<String, Object>> items = consignmentService.getMyConsignments(userId, keyword, series, rarity);
         Map<String, Object> response = new HashMap<>();
         response.put("items", items);
+        response.put("seriesList", consignmentService.getAllSeriesNames());
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/sellable")
-    public ResponseEntity<?> getMySellableCards(@RequestHeader(value = "Authorization", required = false) String token) {
+    public ResponseEntity<?> getMySellableCards(
+            @RequestHeader(value = "Authorization", required = false) String token,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String series,
+            @RequestParam(required = false) Integer rarity) {
         System.out.println("=== /sellable called, token: " + (token != null ? "present" : "null") + " ===");
         Integer userId = extractUserId(token);
         System.out.println("=== Extracted userId: " + userId + " ===");
@@ -76,9 +85,10 @@ public class ConsignmentController {
             return ResponseEntity.ok(response);
         }
         
-        List<Map<String, Object>> items = consignmentService.getMySellableCards(userId);
+        List<Map<String, Object>> items = consignmentService.getMySellableCards(userId, keyword, series, rarity);
         Map<String, Object> response = new HashMap<>();
         response.put("items", items);
+        response.put("seriesList", consignmentService.getAllSeriesNames());
         return ResponseEntity.ok(response);
     }
 

@@ -23,54 +23,94 @@
       <div class="section">
         <h3>赠送卡牌</h3>
         
-        <div class="form-group">
-          <label>选择卡片</label>
-          <div class="card-selector" v-if="myCards.length > 0">
-            <div 
-              v-for="card in myCards" 
-              :key="card.userCardId" 
-              class="card-item"
-              :class="{ selected: selectedGiftCard && selectedGiftCard.userCardId === card.userCardId }"
-              @click="selectGiftCard(card)"
-            >
-              <img :src="card.cardImageUrl" alt="卡片" class="card-image">
-              <div class="card-info">
-                <span class="card-name">{{ card.cardName }}</span>
-                <span class="card-quantity">x{{ card.quantity }}</span>
+        <div class="gift-layout">
+          <div class="gift-side">
+            <div class="side-header">
+              <label>选择卡片</label>
+              <div class="search-row">
+                <input 
+                  v-model="searchGiftCardKeyword" 
+                  placeholder="输入卡片名称搜索..."
+                >
+                <button class="btn-search" @click="searchGiftCardKeyword = ''">清除</button>
+              </div>
+            </div>
+            <div class="card-selector" v-if="filteredGiftCards.length > 0">
+              <div 
+                v-for="card in filteredGiftCards" 
+                :key="card.userCardId" 
+                class="card-item"
+                :class="{ selected: selectedGiftCard && selectedGiftCard.userCardId === card.userCardId }"
+                @click="selectGiftCard(card)"
+              >
+                <img :src="card.cardImageUrl" alt="卡片" class="card-image">
+                <div class="card-info">
+                  <span class="card-name">{{ card.cardName }}</span>
+                  <span class="card-quantity">x{{ card.quantity }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-else-if="myCards.length > 0 && filteredGiftCards.length === 0" class="empty-tip">没有找到匹配的卡片</div>
+            <div v-else class="empty-tip">暂无可用卡片</div>
+            
+            <div class="quantity-section" v-if="selectedGiftCard">
+              <label>赠送数量</label>
+              <input type="number" v-model.number="giftQuantity" min="1" :max="selectedGiftCard?.quantity || 1">
+            </div>
+          </div>
+          
+          <div class="gift-divider">
+            <span class="gift-icon">🎁</span>
+          </div>
+          
+          <div class="gift-side">
+            <div class="side-header">
+              <label>选择接收用户</label>
+              <div class="search-row">
+                <input 
+                  v-model="searchUserKeyword" 
+                  placeholder="输入用户昵称搜索..." 
+                  @keyup.enter="searchUsers"
+                >
+                <button class="btn-search" @click="searchUsers">搜索</button>
+              </div>
+            </div>
+            
+            <div class="user-selector" v-if="filteredUsers.length > 0">
+              <div 
+                v-for="user in filteredUsers" 
+                :key="user.id" 
+                class="user-item"
+                :class="{ selected: selectedReceiver && selectedReceiver.id === user.id }"
+                @click="selectReceiver(user)"
+              >
+                <img :src="getAvatarUrl(user.avatar)" alt="头像" class="user-avatar">
+                <div class="user-info-text">
+                  <span class="user-name">{{ user.nickname || user.username }}</span>
+                  <span class="user-id">ID: {{ user.id }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="empty-tip">暂无用户</div>
+            
+            <div class="gift-preview" v-if="selectedGiftCard && selectedReceiver">
+              <div class="preview-title">赠送预览</div>
+              <div class="preview-content">
+                <div class="preview-card">
+                  <img :src="selectedGiftCard.cardImageUrl" alt="卡片" class="preview-card-image">
+                  <div class="preview-card-info">
+                    <span class="preview-card-name">{{ selectedGiftCard.cardName }}</span>
+                    <span class="preview-card-quantity">x{{ giftQuantity }}</span>
+                  </div>
+                </div>
+                <div class="preview-arrow">→</div>
+                <div class="preview-user">
+                  <img :src="getAvatarUrl(selectedReceiver.avatar)" alt="头像" class="preview-user-avatar">
+                  <span class="preview-user-name">{{ selectedReceiver.nickname || selectedReceiver.username }}</span>
+                </div>
               </div>
             </div>
           </div>
-          <div v-else class="empty-tip">暂无可用卡片</div>
-        </div>
-        
-        <div class="form-group">
-          <label>搜索用户</label>
-          <div class="search-row">
-            <input 
-              v-model="searchUserKeyword" 
-              placeholder="输入用户昵称搜索..." 
-              @keyup.enter="searchUsers"
-            >
-            <button class="btn-search" @click="searchUsers">搜索</button>
-          </div>
-          
-          <div v-if="searchResults.length > 0" class="user-search-results">
-            <div 
-              v-for="user in searchResults" 
-              :key="user.id" 
-              class="user-item"
-              :class="{ selected: selectedReceiver && selectedReceiver.id === user.id }"
-              @click="selectReceiver(user)"
-            >
-              <img :src="getAvatarUrl(user.avatar)" alt="头像" class="user-avatar">
-              <span class="user-name">{{ user.nickname || user.username }}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>赠送数量</label>
-          <input type="number" v-model.number="giftQuantity" min="1" :max="selectedGiftCard?.quantity || 1">
         </div>
         
         <div class="form-actions">
@@ -85,44 +125,64 @@
       <div class="section">
         <h3>卡牌交换</h3>
         
-        <div class="form-group">
-          <label>选择你要送出的卡片</label>
-          <div class="card-selector" v-if="myCards.length > 0">
-            <div 
-              v-for="card in myCards" 
-              :key="card.userCardId" 
-              class="card-item"
-              :class="{ selected: selectedSendCard && selectedSendCard.userCardId === card.userCardId }"
-              @click="selectSendCard(card)"
-            >
-              <img :src="card.cardImageUrl" alt="卡片" class="card-image">
-              <div class="card-info">
-                <span class="card-name">{{ card.cardName }}</span>
-                <span class="card-quantity">x{{ card.quantity }}</span>
+        <div class="exchange-layout">
+          <div class="exchange-side">
+            <div class="side-header">
+              <label>选择你要送出的卡片</label>
+              <div class="search-row">
+                <input 
+                  v-model="searchMyCardKeyword" 
+                  placeholder="输入卡片名称搜索..."
+                >
+                <button class="btn-search" @click="searchMyCardKeyword = ''">清除</button>
               </div>
             </div>
-          </div>
-          <div v-else class="empty-tip">暂无可用卡片</div>
-        </div>
-        
-        <div class="form-group">
-          <label>选择你想要的卡片</label>
-          <div class="search-row">
-            <input 
-              v-model="searchCardKeyword" 
-              placeholder="输入卡片名称搜索..."
-              @keyup.enter="searchCards"
-            >
-            <button class="btn-search" @click="searchCards">搜索</button>
+            <div class="card-selector" v-if="filteredMyCards.length > 0">
+              <div 
+                v-for="card in filteredMyCards" 
+                :key="card.userCardId" 
+                class="card-item"
+                :class="{ selected: selectedSendCard && selectedSendCard.userCardId === card.userCardId }"
+                @click="selectSendCard(card)"
+              >
+                <img :src="card.cardImageUrl" alt="卡片" class="card-image">
+                <div class="card-info">
+                  <span class="card-name">{{ card.cardName }}</span>
+                  <span class="card-quantity">x{{ card.quantity }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-else-if="myCards.length > 0 && filteredMyCards.length === 0" class="empty-tip">没有找到匹配的卡片</div>
+            <div v-else class="empty-tip">暂无可用卡片</div>
+            
+            <div class="quantity-section" v-if="selectedSendCard">
+              <label>送出数量</label>
+              <input type="number" v-model.number="sendQuantity" min="1" :max="selectedSendCard?.quantity || 1">
+            </div>
           </div>
           
-          <div class="card-carousel-container" v-if="allCards.length > 0">
-            <button class="carousel-btn prev" @click="scrollCards('prev')" :disabled="carouselPosition <= 0">‹</button>
-            <div class="card-carousel" ref="cardCarousel">
+          <div class="exchange-divider">
+            <span class="exchange-icon">⇄</span>
+          </div>
+          
+          <div class="exchange-side">
+            <div class="side-header">
+              <label>选择你想要的卡片</label>
+              <div class="search-row">
+                <input 
+                  v-model="searchCardKeyword" 
+                  placeholder="输入卡片名称搜索..."
+                  @keyup.enter="searchCards"
+                >
+                <button class="btn-search" @click="searchCards">搜索</button>
+              </div>
+            </div>
+            
+            <div class="card-selector" v-if="allCards.length > 0">
               <div 
                 v-for="card in allCards" 
                 :key="card.cardId" 
-                class="card-item carousel-item"
+                class="card-item"
                 :class="{ selected: selectedWantCard && selectedWantCard.cardId === card.cardId }"
                 @click="selectWantCard(card)"
               >
@@ -133,46 +193,38 @@
                 </div>
               </div>
             </div>
-            <button class="carousel-btn next" @click="scrollCards('next')">›</button>
-          </div>
-          <div v-else-if="hasSearchedCards" class="empty-tip">没有找到匹配的卡片</div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label>送出数量</label>
-            <input type="number" v-model.number="sendQuantity" min="1" :max="selectedSendCard?.quantity || 1">
-          </div>
-          <div class="form-group">
-            <label>收到数量</label>
-            <input type="number" v-model.number="wantQuantity" min="1">
-          </div>
-        </div>
-        
-        <div class="form-group" v-if="selectedWantCard">
-          <button class="btn btn-secondary" @click="searchUsersWithCard">查找拥有该卡片的用户</button>
-        </div>
-        
-        <div class="form-group" v-if="availableUsers.length > 0">
-          <label>选择交换对象（拥有该卡片的用户）</label>
-          <div class="user-search-results">
-            <div 
-              v-for="user in availableUsers" 
-              :key="user.id" 
-              class="user-item"
-              :class="{ selected: selectedExchangeUser && selectedExchangeUser.id === user.id }"
-              @click="selectExchangeUser(user)"
-            >
-              <img :src="getAvatarUrl(user.avatar)" alt="头像" class="user-avatar">
-              <div class="user-info-text">
-                <span class="user-name">{{ user.nickname || user.username }}</span>
-                <span class="user-card-count">持有: x{{ user.quantity }}</span>
+            <div v-else-if="hasSearchedCards" class="empty-tip">没有找到匹配的卡片</div>
+            <div v-else class="empty-tip">请搜索卡片</div>
+            
+            <div class="quantity-section" v-if="selectedWantCard">
+              <label>收到数量</label>
+              <input type="number" v-model.number="wantQuantity" min="1">
+            </div>
+            
+            <div class="user-section" v-if="selectedWantCard">
+              <button class="btn btn-secondary btn-full" @click="searchUsersWithCard">查找拥有该卡片的用户</button>
+              
+              <div class="user-list" v-if="availableUsers.length > 0">
+                <label>选择交换对象</label>
+                <div class="user-search-results">
+                  <div 
+                    v-for="user in availableUsers" 
+                    :key="user.id" 
+                    class="user-item"
+                    :class="{ selected: selectedExchangeUser && selectedExchangeUser.id === user.id }"
+                    @click="selectExchangeUser(user)"
+                  >
+                    <img :src="getAvatarUrl(user.avatar)" alt="头像" class="user-avatar">
+                    <div class="user-info-text">
+                      <span class="user-name">{{ user.nickname || user.username }}</span>
+                      <span class="user-card-count">持有: x{{ user.quantity }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
+              <div v-else-if="hasSearchedUsers" class="empty-tip">没有找到拥有该卡片的用户</div>
             </div>
           </div>
-        </div>
-        <div class="form-group" v-else-if="selectedWantCard && hasSearchedUsers">
-          <p class="empty-tip">没有找到拥有该卡片的用户</p>
         </div>
         
         <div class="form-actions">
@@ -184,71 +236,73 @@
     </div>
     
     <div v-else-if="activeTab === 'records'" class="tab-content">
-      <div class="section">
-        <h3>收到的赠送</h3>
-        <div v-if="receivedGifts.length === 0" class="empty-tip">暂无收到的赠送记录</div>
-        <div v-else class="records-list">
-          <div v-for="gift in receivedGifts" :key="gift.id" class="record-item">
-            <img :src="gift.cardImageUrl" alt="卡片" class="record-card-image">
-            <div class="record-details">
-              <p class="record-title">{{ gift.cardName }} x{{ gift.quantity }}</p>
-              <p class="record-meta">来自: {{ gift.senderName }} | {{ formatDate(gift.createdAt) }}</p>
+      <div class="records-grid">
+        <div class="section">
+          <h3>收到的赠送</h3>
+          <div v-if="receivedGifts.length === 0" class="empty-tip">暂无收到的赠送记录</div>
+          <div v-else class="records-list">
+            <div v-for="gift in receivedGifts" :key="gift.id" class="record-item">
+              <img :src="gift.cardImageUrl" alt="卡片" class="record-card-image">
+              <div class="record-details">
+                <p class="record-title">{{ gift.cardName }} x{{ gift.quantity }}</p>
+                <p class="record-meta">来自: {{ gift.senderName }} | {{ formatDate(gift.createdAt) }}</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      
-      <div class="section">
-        <h3>待处理的交换申请</h3>
-        <div v-if="pendingExchanges.length === 0" class="empty-tip">暂无待处理的交换申请</div>
-        <div v-else class="records-list">
-          <div v-for="exchange in pendingExchanges" :key="exchange.id" class="exchange-item">
-            <div class="exchange-info">
-              <div class="exchange-card">
-                <img :src="exchange.senderCardImageUrl" alt="卡片" class="exchange-card-image">
-                <p>{{ exchange.senderCardName }} x{{ exchange.senderCardQuantity }}</p>
-                <span class="card-label">对方提供</span>
+        
+        <div class="section">
+          <h3>待处理的交换申请</h3>
+          <div v-if="pendingExchanges.length === 0" class="empty-tip">暂无待处理的交换申请</div>
+          <div v-else class="records-list">
+            <div v-for="exchange in pendingExchanges" :key="exchange.id" class="exchange-item">
+              <div class="exchange-info">
+                <div class="exchange-card">
+                  <img :src="exchange.senderCardImageUrl" alt="卡片" class="exchange-card-image">
+                  <p>{{ exchange.senderCardName }} x{{ exchange.senderCardQuantity }}</p>
+                  <span class="card-label">对方提供</span>
+                </div>
+                <span class="exchange-arrow">⇄</span>
+                <div class="exchange-card">
+                  <img :src="exchange.receiverCardImageUrl" alt="卡片" class="exchange-card-image">
+                  <p>{{ exchange.receiverCardName }} x{{ exchange.receiverCardQuantity }}</p>
+                  <span class="card-label">你提供</span>
+                </div>
               </div>
-              <span class="exchange-arrow">⇄</span>
-              <div class="exchange-card">
-                <img :src="exchange.receiverCardImageUrl" alt="卡片" class="exchange-card-image">
-                <p>{{ exchange.receiverCardName }} x{{ exchange.receiverCardQuantity }}</p>
-                <span class="card-label">你提供</span>
+              <div class="exchange-meta">
+                <span>来自: {{ exchange.senderName }}</span>
+                <span>{{ formatDate(exchange.createdAt) }}</span>
               </div>
-            </div>
-            <div class="exchange-meta">
-              <span>来自: {{ exchange.senderName }}</span>
-              <span>{{ formatDate(exchange.createdAt) }}</span>
-            </div>
-            <div class="exchange-actions">
-              <button class="btn btn-success" @click="acceptExchange(exchange)">同意</button>
-              <button class="btn btn-danger" @click="rejectExchange(exchange)">拒绝</button>
+              <div class="exchange-actions">
+                <button class="btn btn-success" @click="acceptExchange(exchange)">同意</button>
+                <button class="btn btn-danger" @click="rejectExchange(exchange)">拒绝</button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      
-      <div class="section">
-        <h3>我发送的交换申请</h3>
-        <div v-if="myExchangeRequests.length === 0" class="empty-tip">暂无发送的交换申请</div>
-        <div v-else class="records-list">
-          <div v-for="exchange in myExchangeRequests" :key="exchange.id" class="exchange-item">
-            <div class="exchange-info">
-              <div class="exchange-card">
-                <img :src="exchange.senderCardImageUrl" alt="卡片" class="exchange-card-image">
-                <p>{{ exchange.senderCardName }} x{{ exchange.senderCardQuantity }}</p>
-                <span class="card-label">你提供</span>
+        
+        <div class="section">
+          <h3>我发送的交换申请</h3>
+          <div v-if="myExchangeRequests.length === 0" class="empty-tip">暂无发送的交换申请</div>
+          <div v-else class="records-list">
+            <div v-for="exchange in myExchangeRequests" :key="exchange.id" class="exchange-item">
+              <div class="exchange-info">
+                <div class="exchange-card">
+                  <img :src="exchange.senderCardImageUrl" alt="卡片" class="exchange-card-image">
+                  <p>{{ exchange.senderCardName }} x{{ exchange.senderCardQuantity }}</p>
+                  <span class="card-label">你提供</span>
+                </div>
+                <span class="exchange-arrow">⇄</span>
+                <div class="exchange-card">
+                  <img :src="exchange.receiverCardImageUrl" alt="卡片" class="exchange-card-image">
+                  <p>{{ exchange.receiverCardName }} x{{ exchange.receiverCardQuantity }}</p>
+                  <span class="card-label">对方提供</span>
+                </div>
               </div>
-              <span class="exchange-arrow">⇄</span>
-              <div class="exchange-card">
-                <img :src="exchange.receiverCardImageUrl" alt="卡片" class="exchange-card-image">
-                <p>{{ exchange.receiverCardName }} x{{ exchange.receiverCardQuantity }}</p>
-                <span class="card-label">对方提供</span>
+              <div class="exchange-meta">
+                <span>发给: {{ exchange.receiverName }}</span>
+                <span :class="getStatusClass(exchange.status)">{{ getStatusText(exchange.status) }}</span>
               </div>
-            </div>
-            <div class="exchange-meta">
-              <span>发给: {{ exchange.receiverName }}</span>
-              <span :class="getStatusClass(exchange.status)">{{ getStatusText(exchange.status) }}</span>
             </div>
           </div>
         </div>
@@ -258,7 +312,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 
 const API_BASE = '/api/card-exchange';
@@ -277,6 +331,36 @@ const sendQuantity = ref(1);
 const wantQuantity = ref(1);
 const receivedGifts = ref([]);
 const pendingExchanges = ref([]);
+const searchMyCardKeyword = ref('');
+const searchGiftCardKeyword = ref('');
+
+const filteredMyCards = computed(() => {
+  if (!searchMyCardKeyword.value.trim()) {
+    return myCards.value;
+  }
+  const keyword = searchMyCardKeyword.value.toLowerCase().trim();
+  return myCards.value.filter(card => 
+    card.cardName.toLowerCase().includes(keyword)
+  );
+});
+
+const filteredGiftCards = computed(() => {
+  if (!searchGiftCardKeyword.value.trim()) {
+    return myCards.value;
+  }
+  const keyword = searchGiftCardKeyword.value.toLowerCase().trim();
+  return myCards.value.filter(card => 
+    card.cardName.toLowerCase().includes(keyword)
+  );
+});
+
+const filteredUsers = computed(() => {
+  if (!searchUserKeyword.value.trim()) {
+    return allUsers.value;
+  }
+  return searchResults.value;
+});
+
 const myExchangeRequests = ref([]);
 const availableUsers = ref([]);
 const hasSearchedUsers = ref(false);
@@ -285,6 +369,7 @@ const allCards = ref([]);
 const hasSearchedCards = ref(false);
 const cardCarousel = ref(null);
 const carouselPosition = ref(0);
+const allUsers = ref([]);
 
 const getToken = () => localStorage.getItem('token') || '';
 
@@ -351,6 +436,18 @@ const searchUsers = async () => {
     searchResults.value = data.users || [];
   } catch (error) {
     console.error('搜索用户失败:', error);
+  }
+};
+
+const fetchAllUsers = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/all-users`, {
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+    const data = await response.json();
+    allUsers.value = data.users || [];
+  } catch (error) {
+    console.error('获取用户列表失败:', error);
   }
 };
 
@@ -599,6 +696,7 @@ const fetchMyExchangeRequests = async () => {
 
 onMounted(() => {
   fetchMyCards();
+  fetchAllUsers();
   fetchReceivedGifts();
   fetchPendingExchanges();
   fetchMyExchangeRequests();
@@ -658,8 +756,272 @@ onMounted(() => {
   background: white;
   border-radius: 12px;
   padding: 20px;
-  margin-bottom: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.gift-layout {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.gift-side {
+  flex: 1;
+  min-width: 280px;
+}
+
+.gift-side .side-header {
+  margin-bottom: 12px;
+}
+
+.gift-side .side-header label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.gift-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  flex-shrink: 0;
+}
+
+.gift-icon {
+  font-size: 28px;
+}
+
+.user-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.user-selector .user-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.user-selector .user-item:hover {
+  border-color: #3b82f6;
+  transform: translateX(4px);
+}
+
+.user-selector .user-item.selected {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.user-selector .user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-selector .user-info-text {
+  flex: 1;
+}
+
+.user-selector .user-name {
+  display: block;
+  font-size: 14px;
+  color: #1a202c;
+  font-weight: 500;
+}
+
+.user-selector .user-id {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.gift-preview {
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+}
+
+.preview-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  opacity: 0.9;
+}
+
+.preview-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.preview-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+}
+
+.preview-card-image {
+  width: 40px;
+  height: 53px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.preview-card-info {
+  flex: 1;
+}
+
+.preview-card-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.preview-card-quantity {
+  display: block;
+  font-size: 11px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.preview-arrow {
+  font-size: 20px;
+  opacity: 0.8;
+}
+
+.preview-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+}
+
+.preview-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.preview-user-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.exchange-layout {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.exchange-side {
+  flex: 1;
+  min-width: 280px;
+}
+
+.exchange-side .side-header {
+  margin-bottom: 12px;
+}
+
+.exchange-side .side-header label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.exchange-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  flex-shrink: 0;
+}
+
+.exchange-icon {
+  font-size: 28px;
+  color: #3b82f6;
+  font-weight: bold;
+}
+
+.quantity-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.quantity-section label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.quantity-section input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.user-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.user-section .btn-full {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.user-list label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.records-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.records-grid .section {
+  margin-bottom: 0;
+}
+
+.records-grid .records-list {
+  max-height: 400px;
 }
 
 .section h3 {
@@ -705,79 +1067,120 @@ onMounted(() => {
 .search-row {
   display: flex;
   gap: 8px;
+  width: 100%;
+  align-items: center;
 }
 
 .search-row input {
-  flex: 1;
+  flex: 0 1 180px;
+  min-width: 120px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  background: #f8fafc;
+}
+
+.search-row input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-row input::placeholder {
+  color: #94a3b8;
 }
 
 .btn-search {
-  padding: 10px 16px;
-  background: #3b82f6;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 20px;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-search:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-search:active {
+  transform: translateY(0);
 }
 
 .card-selector {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  max-height: 200px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 10px;
+  max-height: 320px;
   overflow-y: auto;
+  padding: 4px;
 }
 
 .card-item {
-  width: 100px;
   border: 2px solid #e2e8f0;
   border-radius: 8px;
-  padding: 8px;
+  padding: 6px;
   cursor: pointer;
   transition: all 0.2s;
+  background: white;
 }
 
 .card-item:hover {
   border-color: #3b82f6;
+  transform: translateY(-2px);
 }
 
 .card-item.selected {
   border-color: #3b82f6;
   background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 .card-image {
   width: 100%;
-  height: 80px;
+  aspect-ratio: 3/4;
   object-fit: cover;
   border-radius: 4px;
+  display: block;
 }
 
 .card-info {
-  margin-top: 8px;
+  margin-top: 6px;
   text-align: center;
 }
 
 .card-name {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   color: #1a202c;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .card-quantity {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   color: #64748b;
+  margin-top: 2px;
 }
 
 .user-search-results {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
   margin-top: 8px;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .user-item {
@@ -789,6 +1192,7 @@ onMounted(() => {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
+  background: white;
 }
 
 .user-item:hover {

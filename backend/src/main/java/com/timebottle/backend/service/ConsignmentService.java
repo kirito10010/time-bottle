@@ -94,11 +94,34 @@ public class ConsignmentService {
         return result;
     }
 
-    public List<Map<String, Object>> getMyConsignments(@NonNull Integer userId) {
+    public List<Map<String, Object>> getMyConsignments(@NonNull Integer userId, String keyword, String series, Integer rarity) {
         List<Consignment> consignments = consignmentRepository.findBySellerId(userId);
         List<Map<String, Object>> result = new ArrayList<>();
         
         for (Consignment c : consignments) {
+            Optional<AnimeCard> cardOpt = animeCardRepository.findById(c.getCardId());
+            if (cardOpt.isEmpty()) continue;
+            
+            AnimeCard card = cardOpt.get();
+            
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                String kw = keyword.toLowerCase().trim();
+                if (!card.getName().toLowerCase().contains(kw) && 
+                    !card.getSeriesName().toLowerCase().contains(kw)) {
+                    continue;
+                }
+            }
+            
+            if (series != null && !series.trim().isEmpty()) {
+                if (!card.getSeriesName().equals(series)) {
+                    continue;
+                }
+            }
+            
+            if (rarity != null && !card.getRarityLevel().equals(rarity)) {
+                continue;
+            }
+            
             Map<String, Object> item = new HashMap<>();
             item.put("id", c.getId());
             item.put("cardId", c.getCardId());
@@ -106,18 +129,14 @@ public class ConsignmentService {
             item.put("quantity", c.getQuantity());
             item.put("createdAt", c.getCreatedAt());
 
-            Optional<AnimeCard> cardOpt = animeCardRepository.findById(c.getCardId());
-            if (cardOpt.isPresent()) {
-                AnimeCard card = cardOpt.get();
-                Map<String, Object> cardInfo = new HashMap<>();
-                cardInfo.put("id", card.getId());
-                cardInfo.put("name", card.getName());
-                cardInfo.put("seriesName", card.getSeriesName());
-                cardInfo.put("type", card.getType());
-                cardInfo.put("rarityLevel", card.getRarityLevel());
-                cardInfo.put("imageUrl", card.getImageUrl());
-                item.put("card", cardInfo);
-            }
+            Map<String, Object> cardInfo = new HashMap<>();
+            cardInfo.put("id", card.getId());
+            cardInfo.put("name", card.getName());
+            cardInfo.put("seriesName", card.getSeriesName());
+            cardInfo.put("type", card.getType());
+            cardInfo.put("rarityLevel", card.getRarityLevel());
+            cardInfo.put("imageUrl", card.getImageUrl());
+            item.put("card", cardInfo);
 
             result.add(item);
         }
@@ -271,7 +290,7 @@ public class ConsignmentService {
         }
     }
 
-    public List<Map<String, Object>> getMySellableCards(@NonNull Integer userId) {
+    public List<Map<String, Object>> getMySellableCards(@NonNull Integer userId, String keyword, String series, Integer rarity) {
         System.out.println("=== getMySellableCards called with userId: " + userId + " ===");
         List<UserCard> userCards = userCardRepository.findByUid(userId.longValue());
         System.out.println("=== Found " + userCards.size() + " user cards ===");
@@ -284,6 +303,25 @@ public class ConsignmentService {
                 Optional<AnimeCard> cardOpt = animeCardRepository.findById(uc.getCardId());
                 if (cardOpt.isPresent()) {
                     AnimeCard card = cardOpt.get();
+                    
+                    if (keyword != null && !keyword.trim().isEmpty()) {
+                        String kw = keyword.toLowerCase().trim();
+                        if (!card.getName().toLowerCase().contains(kw) && 
+                            !card.getSeriesName().toLowerCase().contains(kw)) {
+                            continue;
+                        }
+                    }
+                    
+                    if (series != null && !series.trim().isEmpty()) {
+                        if (!card.getSeriesName().equals(series)) {
+                            continue;
+                        }
+                    }
+                    
+                    if (rarity != null && !card.getRarityLevel().equals(rarity)) {
+                        continue;
+                    }
+                    
                     Map<String, Object> item = new HashMap<>();
                     item.put("cardId", card.getId());
                     item.put("name", card.getName());

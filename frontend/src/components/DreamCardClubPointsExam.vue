@@ -25,11 +25,7 @@
         <div class="options">
           <button 
             class="option-btn"
-            :class="{ 
-              'selected': selectedAnswer === 'A',
-              'correct': showAnswer && currentQuestion.correctOption === 'A',
-              'wrong': showAnswer && selectedAnswer === 'A' && currentQuestion.correctOption !== 'A'
-            }"
+            :class="{ 'selected': selectedAnswer === 'A' }"
             :disabled="showAnswer"
             @click="selectAnswer('A')"
           >
@@ -37,11 +33,7 @@
           </button>
           <button 
             class="option-btn"
-            :class="{ 
-              'selected': selectedAnswer === 'B',
-              'correct': showAnswer && currentQuestion.correctOption === 'B',
-              'wrong': showAnswer && selectedAnswer === 'B' && currentQuestion.correctOption !== 'B'
-            }"
+            :class="{ 'selected': selectedAnswer === 'B' }"
             :disabled="showAnswer"
             @click="selectAnswer('B')"
           >
@@ -49,11 +41,7 @@
           </button>
           <button 
             class="option-btn"
-            :class="{ 
-              'selected': selectedAnswer === 'C',
-              'correct': showAnswer && currentQuestion.correctOption === 'C',
-              'wrong': showAnswer && selectedAnswer === 'C' && currentQuestion.correctOption !== 'C'
-            }"
+            :class="{ 'selected': selectedAnswer === 'C' }"
             :disabled="showAnswer"
             @click="selectAnswer('C')"
           >
@@ -61,11 +49,7 @@
           </button>
           <button 
             class="option-btn"
-            :class="{ 
-              'selected': selectedAnswer === 'D',
-              'correct': showAnswer && currentQuestion.correctOption === 'D',
-              'wrong': showAnswer && selectedAnswer === 'D' && currentQuestion.correctOption !== 'D'
-            }"
+            :class="{ 'selected': selectedAnswer === 'D' }"
             :disabled="showAnswer"
             @click="selectAnswer('D')"
           >
@@ -74,11 +58,9 @@
         </div>
         
         <div v-if="showAnswer" class="answer-feedback">
-          <p :class="{ 'correct-text': isCorrect, 'wrong-text': !isCorrect }">
-            {{ isCorrect ? '✓ 回答正确！' : '✗ 回答错误' }}
-          </p>
+          <p class="selected-text">已选择：{{ selectedAnswer }}</p>
           <button class="next-btn" @click="nextQuestion">
-            {{ currentIndex < questions.length - 1 ? '下一题' : '查看结果' }}
+            {{ currentIndex < questions.length - 1 ? '下一题' : '提交答案' }}
           </button>
         </div>
       </div>
@@ -113,9 +95,9 @@ const correctCount = ref(0);
 const pointsEarned = ref(0);
 
 const questions = ref([]);
+const userAnswers = ref([]);
 
 const currentQuestion = computed(() => questions.value[currentIndex.value] || {});
-const isCorrect = computed(() => selectedAnswer.value === currentQuestion.value.correctOption);
 
 const getToken = () => {
   return localStorage.getItem('token') || '';
@@ -130,7 +112,11 @@ const startExam = async () => {
     if (!response.ok) {
       const text = await response.text();
       console.error('开始考试失败:', response.status, text);
-      ElMessage.error('获取题目失败，请检查登录状态');
+      if (response.status === 429) {
+        ElMessage.error('今日考试次数已用完，请明天再来');
+      } else {
+        ElMessage.error('获取题目失败，请检查登录状态');
+      }
       return;
     }
     
@@ -141,6 +127,7 @@ const startExam = async () => {
     currentIndex.value = 0;
     correctCount.value = 0;
     pointsEarned.value = 0;
+    userAnswers.value = [];
   } catch (error) {
     console.error('开始考试失败:', error);
     ElMessage.error('网络错误，请稍后重试');
@@ -152,9 +139,10 @@ const selectAnswer = (option) => {
   selectedAnswer.value = option;
   showAnswer.value = true;
   
-  if (isCorrect.value) {
-    correctCount.value++;
-  }
+  userAnswers.value.push({
+    questionId: currentQuestion.value.id,
+    answer: option
+  });
 };
 
 const nextQuestion = () => {
@@ -176,13 +164,19 @@ const submitExam = async () => {
         'Authorization': `Bearer ${getToken()}`
       },
       body: JSON.stringify({
-        correctCount: correctCount.value
+        answers: userAnswers.value
       })
     });
     
     const data = await response.json();
     
     if (response.ok) {
+      if (data.correctCount === -1) {
+        ElMessage.error('今日考试次数已用完，请明天再来');
+        resetExam();
+        return;
+      }
+      correctCount.value = data.correctCount;
       pointsEarned.value = data.pointsEarned;
       examFinished.value = true;
       if (data.pointsEarned > 0) {
@@ -207,6 +201,7 @@ const resetExam = () => {
   correctCount.value = 0;
   pointsEarned.value = 0;
   questions.value = [];
+  userAnswers.value = [];
 };
 </script>
 
@@ -351,18 +346,6 @@ const resetExam = () => {
   background: #eff6ff;
 }
 
-.option-btn.correct {
-  border-color: #10b981;
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.option-btn.wrong {
-  border-color: #ef4444;
-  background: #fee2e2;
-  color: #991b1b;
-}
-
 .option-btn:disabled {
   cursor: default;
 }
@@ -372,15 +355,8 @@ const resetExam = () => {
   text-align: center;
 }
 
-.correct-text {
-  color: #10b981;
-  font-weight: 600;
-  font-size: 16px;
-  margin: 0 0 16px 0;
-}
-
-.wrong-text {
-  color: #ef4444;
+.selected-text {
+  color: #3b82f6;
   font-weight: 600;
   font-size: 16px;
   margin: 0 0 16px 0;

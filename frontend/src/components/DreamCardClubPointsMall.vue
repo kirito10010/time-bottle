@@ -41,19 +41,23 @@
               <img :src="item.card?.imageUrl" :alt="item.card?.name" class="card-image">
             </div>
             <div class="item-info">
-              <h4 class="card-name">{{ item.card?.name }}</h4>
-              <p class="card-series">{{ item.card?.seriesName }}</p>
-              <div class="card-meta">
+              <div class="info-header">
+                <h4 class="card-name">{{ item.card?.name }}</h4>
                 <span class="card-type" :class="getRarityClass(item.card?.rarityLevel)">{{ item.card?.type }}</span>
-                <span class="quantity">库存: {{ item.quantity }}</span>
               </div>
-              <div class="seller-info">
-                <img :src="getAvatarUrl(item.seller?.avatar)" class="seller-avatar">
-                <span class="seller-name">{{ item.seller?.nickname }}</span>
+              <div class="info-row">
+                <span class="card-series">{{ item.card?.seriesName }}</span>
+                <span class="quantity">库存 {{ item.quantity }}</span>
               </div>
-              <div class="price-row">
-                <span class="price">{{ item.unitPrice }} 积分</span>
-                <button class="btn-buy" @click="openBuyModal(item)" :disabled="item.quantity <= 0">购买</button>
+              <div class="info-footer">
+                <div class="seller-info">
+                  <img :src="getAvatarUrl(item.seller?.avatar)" class="seller-avatar">
+                  <span class="seller-name">{{ item.seller?.nickname }}</span>
+                </div>
+                <div class="price-action">
+                  <span class="price">{{ item.unitPrice }} 积分</span>
+                  <button class="btn-buy" @click="openBuyModal(item)" :disabled="item.quantity <= 0">购买</button>
+                </div>
               </div>
             </div>
           </div>
@@ -72,17 +76,38 @@
       </div>
 
       <div v-if="activeTab === 'my-listings'" class="my-listings-tab">
+        <div class="filter-row">
+          <div class="search-bar">
+            <input type="text" v-model="myListingsSearchKeyword" placeholder="搜索卡片名称或系列..." @keyup.enter="searchMyListings">
+            <button class="btn-search" @click="searchMyListings">搜索</button>
+          </div>
+          <select v-model="myListingsSelectedSeries" @change="searchMyListings" class="filter-select">
+            <option value="">全部系列</option>
+            <option v-for="series in seriesList" :key="series" :value="series">{{ series }}</option>
+          </select>
+          <select v-model="myListingsSelectedRarity" @change="searchMyListings" class="filter-select">
+            <option value="">全部稀有度</option>
+            <option value="1">普通</option>
+            <option value="2">精良</option>
+            <option value="3">稀有</option>
+            <option value="4">史诗</option>
+            <option value="5">传说</option>
+          </select>
+        </div>
+        
         <div class="items-grid" v-if="myConsignments.length > 0">
           <div v-for="item in myConsignments" :key="item.id" class="item-card my-item">
             <div class="card-image-wrapper" :class="getRarityClass(item.card?.rarityLevel)">
               <img :src="item.card?.imageUrl" :alt="item.card?.name" class="card-image">
             </div>
             <div class="item-info">
-              <h4 class="card-name">{{ item.card?.name }}</h4>
-              <p class="card-series">{{ item.card?.seriesName }}</p>
-              <div class="card-meta">
+              <div class="info-header">
+                <h4 class="card-name">{{ item.card?.name }}</h4>
                 <span class="card-type" :class="getRarityClass(item.card?.rarityLevel)">{{ item.card?.type }}</span>
-                <span class="quantity">库存: {{ item.quantity }}</span>
+              </div>
+              <div class="info-row">
+                <span class="card-series">{{ item.card?.seriesName }}</span>
+                <span class="quantity">库存 {{ item.quantity }}</span>
               </div>
               <div class="price-row">
                 <span class="price">{{ item.unitPrice }} 积分</span>
@@ -99,17 +124,38 @@
       </div>
 
       <div v-if="activeTab === 'sell'" class="sell-tab">
+        <div class="filter-row">
+          <div class="search-bar">
+            <input type="text" v-model="sellSearchKeyword" placeholder="搜索卡片名称或系列..." @keyup.enter="searchSellableCards">
+            <button class="btn-search" @click="searchSellableCards">搜索</button>
+          </div>
+          <select v-model="sellSelectedSeries" @change="searchSellableCards" class="filter-select">
+            <option value="">全部系列</option>
+            <option v-for="series in seriesList" :key="series" :value="series">{{ series }}</option>
+          </select>
+          <select v-model="sellSelectedRarity" @change="searchSellableCards" class="filter-select">
+            <option value="">全部稀有度</option>
+            <option value="1">普通</option>
+            <option value="2">精良</option>
+            <option value="3">稀有</option>
+            <option value="4">史诗</option>
+            <option value="5">传说</option>
+          </select>
+        </div>
+        
         <div class="items-grid" v-if="sellableCards.length > 0">
           <div v-for="card in sellableCards" :key="card.cardId" class="item-card sell-item">
             <div class="card-image-wrapper" :class="getRarityClass(card.rarityLevel)">
               <img :src="card.imageUrl" :alt="card.name" class="card-image">
             </div>
             <div class="item-info">
-              <h4 class="card-name">{{ card.name }}</h4>
-              <p class="card-series">{{ card.seriesName }}</p>
-              <div class="card-meta">
+              <div class="info-header">
+                <h4 class="card-name">{{ card.name }}</h4>
                 <span class="card-type" :class="getRarityClass(card.rarityLevel)">{{ card.type }}</span>
-                <span class="quantity">拥有: {{ card.quantity }}</span>
+              </div>
+              <div class="info-row">
+                <span class="card-series">{{ card.seriesName }}</span>
+                <span class="quantity">拥有 {{ card.quantity }}</span>
               </div>
               <button class="btn-sell" @click="openSellModal(card)">上架</button>
             </div>
@@ -216,6 +262,14 @@ const selectedSeries = ref('');
 const selectedRarity = ref('');
 const seriesList = ref([]);
 
+const myListingsSearchKeyword = ref('');
+const myListingsSelectedSeries = ref('');
+const myListingsSelectedRarity = ref('');
+
+const sellSearchKeyword = ref('');
+const sellSelectedSeries = ref('');
+const sellSelectedRarity = ref('');
+
 const consignments = ref([]);
 const myConsignments = ref([]);
 const sellableCards = ref([]);
@@ -317,11 +371,24 @@ const fetchMyConsignments = async () => {
   if (!token) return;
 
   try {
-    const response = await fetch(`${API_BASE}/my`, {
+    const params = new URLSearchParams();
+    if (myListingsSearchKeyword.value) params.append('keyword', myListingsSearchKeyword.value);
+    if (myListingsSelectedSeries.value) params.append('series', myListingsSelectedSeries.value);
+    if (myListingsSelectedRarity.value) params.append('rarity', myListingsSelectedRarity.value);
+
+    const url = params.toString() 
+      ? `${API_BASE}/my?${params.toString()}` 
+      : `${API_BASE}/my`;
+    
+    const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const data = await response.json();
     myConsignments.value = data.items || [];
+    
+    if (data.seriesList) {
+      seriesList.value = data.seriesList;
+    }
   } catch (error) {
     console.error('获取我的上架失败:', error);
   }
@@ -332,14 +399,35 @@ const fetchSellableCards = async () => {
   if (!token) return;
 
   try {
-    const response = await fetch(`${API_BASE}/sellable`, {
+    const params = new URLSearchParams();
+    if (sellSearchKeyword.value) params.append('keyword', sellSearchKeyword.value);
+    if (sellSelectedSeries.value) params.append('series', sellSelectedSeries.value);
+    if (sellSelectedRarity.value) params.append('rarity', sellSelectedRarity.value);
+
+    const url = params.toString() 
+      ? `${API_BASE}/sellable?${params.toString()}` 
+      : `${API_BASE}/sellable`;
+    
+    const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const data = await response.json();
     sellableCards.value = data.items || [];
+    
+    if (data.seriesList) {
+      seriesList.value = data.seriesList;
+    }
   } catch (error) {
     console.error('获取可上架卡片失败:', error);
   }
+};
+
+const searchMyListings = () => {
+  fetchMyConsignments();
+};
+
+const searchSellableCards = () => {
+  fetchSellableCards();
 };
 
 const openBuyModal = (item) => {
@@ -624,27 +712,29 @@ onMounted(() => {
 
 .items-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
 }
 
 .item-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .item-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 .card-image-wrapper {
   position: relative;
-  aspect-ratio: 3/4;
+  width: 100%;
+  padding-bottom: 133.33%;
   overflow: hidden;
+  background: #f8fafc;
 }
 
 .card-image-wrapper.legendary { box-shadow: inset 0 0 20px rgba(255, 215, 0, 0.3); }
@@ -653,43 +743,44 @@ onMounted(() => {
 .card-image-wrapper.uncommon { box-shadow: inset 0 0 20px rgba(34, 197, 94, 0.3); }
 
 .card-image {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center center;
 }
 
 .item-info {
-  padding: 12px;
+  padding: 10px;
 }
 
-.card-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0 0 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.card-series {
-  font-size: 12px;
-  color: #64748b;
-  margin: 0 0 8px;
-}
-
-.card-meta {
+.info-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
 }
 
 .card-type {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 
 .card-type.legendary { background: #fef3c7; color: #b45309; }
@@ -698,28 +789,64 @@ onMounted(() => {
 .card-type.uncommon { background: #d1fae5; color: #059669; }
 .card-type.common { background: #f1f5f9; color: #64748b; }
 
-.quantity {
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.card-series {
   font-size: 11px;
   color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.quantity {
+  font-size: 10px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.info-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .seller-info {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
 }
 
 .seller-avatar {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .seller-name {
-  font-size: 11px;
-  color: #64748b;
+  font-size: 10px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.price-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .price-row {
@@ -729,18 +856,18 @@ onMounted(() => {
 }
 
 .price {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: #667eea;
 }
 
 .btn-buy {
-  padding: 6px 14px;
+  padding: 5px 12px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 5px;
+  font-size: 11px;
   cursor: pointer;
 }
 
@@ -754,13 +881,14 @@ onMounted(() => {
 }
 
 .btn-delist {
-  padding: 6px 14px;
+  padding: 5px 12px;
   background: #fee2e2;
   color: #dc2626;
   border: none;
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 5px;
+  font-size: 11px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .btn-delist:hover {
@@ -770,12 +898,12 @@ onMounted(() => {
 
 .btn-sell {
   width: 100%;
-  padding: 8px;
+  padding: 6px;
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 5px;
+  font-size: 11px;
   cursor: pointer;
 }
 

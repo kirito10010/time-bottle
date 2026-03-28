@@ -46,6 +46,26 @@ public class CardExchangeController {
         return ResponseEntity.ok(Map.of("users", userList));
     }
 
+    @GetMapping("/all-users")
+    public ResponseEntity<?> getAllUsers(@RequestHeader(value = "Authorization", required = false) String token) {
+        Integer userId = extractUserId(token);
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "请先登录"));
+        }
+        
+        List<User> users = cardExchangeService.getAllUsers(userId);
+        List<Map<String, Object>> userList = users.stream().map(u -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", u.getId());
+            map.put("username", u.getUsername());
+            map.put("nickname", u.getNickname());
+            map.put("avatar", u.getAvatar());
+            return map;
+        }).toList();
+        
+        return ResponseEntity.ok(Map.of("users", userList));
+    }
+
     @GetMapping("/find-users-with-card")
     public ResponseEntity<?> findUsersWithCard(
             @RequestParam Long cardId,

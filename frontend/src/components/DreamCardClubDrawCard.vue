@@ -272,28 +272,28 @@ onMounted(() => {
 }
 
 .points-badge {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
-  color: white;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  color: #1e293b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(102, 126, 234, 0.2);
 }
 
 .points-badge .points-icon {
   font-size: 16px;
-  animation: sparkle 1.5s ease-in-out infinite;
 }
 
 .points-badge .points-value {
   font-size: 14px;
-  font-weight: 600;
-}
-
-@keyframes sparkle {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  50% { transform: scale(1.15) rotate(10deg); }
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .draw-area {
@@ -839,12 +839,12 @@ onMounted(() => {
 
 .draw-btn {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
+  gap: 8px;
+  padding: 10px 18px;
   border: none;
-  border-radius: 12px;
+  border-radius: 24px;
   cursor: pointer;
   transition: all 0.3s ease;
   overflow: hidden;
@@ -857,7 +857,7 @@ onMounted(() => {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
   transition: left 0.5s ease;
 }
 
@@ -868,26 +868,26 @@ onMounted(() => {
 .draw-btn.single {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
 }
 
 .draw-btn.multi {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   color: white;
-  box-shadow: 0 4px 12px rgba(240, 147, 251, 0.4);
+  box-shadow: 0 2px 8px rgba(240, 147, 251, 0.25);
 }
 
 .draw-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.35);
 }
 
 .draw-btn.multi:hover:not(:disabled) {
-  box-shadow: 0 6px 20px rgba(240, 147, 251, 0.5);
+  box-shadow: 0 4px 16px rgba(240, 147, 251, 0.35);
 }
 
 .draw-btn:active:not(:disabled) {
-  transform: translateY(-1px);
+  transform: translateY(0);
 }
 
 .draw-btn:disabled {
@@ -897,25 +897,25 @@ onMounted(() => {
 }
 
 .btn-icon {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .btn-content {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1px;
+  gap: 0;
 }
 
 .btn-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .btn-cost {
-  font-size: 11px;
-  opacity: 0.8;
+  font-size: 10px;
+  opacity: 0.85;
 }
 
 .btn-discount {

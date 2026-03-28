@@ -34,6 +34,14 @@ public class CardExchangeService {
         return userRepository.searchByKeyword(keyword, excludeUserId);
     }
 
+    public List<User> getAllUsers(Integer excludeUserId) {
+        List<User> allUsers = userRepository.findAll();
+        return allUsers.stream()
+            .filter(u -> !u.getId().equals(excludeUserId))
+            .filter(u -> u.getStatus() != null && u.getStatus().equals("1"))
+            .collect(Collectors.toList());
+    }
+
     public List<Map<String, Object>> findUsersWithCard(Long cardId, Integer minQuantity, Integer excludeUserId) {
         List<UserCard> userCards = userCardRepository.findByCardIdAndQuantityGreaterThan(cardId, 0);
         
