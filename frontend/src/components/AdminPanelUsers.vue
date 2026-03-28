@@ -304,6 +304,14 @@ const saveUser = async () => {
     const data = await response.json();
     
     if (response.ok) {
+      const currentUserId = parseInt(localStorage.getItem('userId') || '0');
+      if (editingUser.value.id === currentUserId) {
+        localStorage.setItem('nickname', editForm.value.nickname || editingUser.value.username);
+        localStorage.setItem('points', editForm.value.points.toString());
+        localStorage.setItem('role', editForm.value.role);
+        window.dispatchEvent(new CustomEvent('userProfileUpdated'));
+      }
+      
       ElMessage.success('保存成功');
       closeEditModal();
       fetchUsers();

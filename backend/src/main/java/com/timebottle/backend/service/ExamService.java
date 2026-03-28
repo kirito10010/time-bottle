@@ -90,6 +90,62 @@ public class ExamService {
         return correctCount;
     }
 
+    public Map<String, Object> validateAndSubmitExamWithDetails(Integer userId, List<Map<String, Object>> userAnswers) {
+        Map<String, Object> result = new HashMap<>();
+        
+        if (!canTakeExam(userId)) {
+            result.put("correctCount", -1);
+            result.put("details", new ArrayList<>());
+            return result;
+        }
+
+        int correctCount = 0;
+        List<Map<String, Object>> details = new ArrayList<>();
+        
+        for (Map<String, Object> answer : userAnswers) {
+            Integer questionId = (Integer) answer.get("questionId");
+            String userAnswer = (String) answer.get("answer");
+            
+            if (questionId != null && userAnswer != null) {
+                Question question = questionRepository.findById(questionId).orElse(null);
+                if (question != null) {
+                    boolean isCorrect = userAnswer.equalsIgnoreCase(question.getCorrectOption());
+                    if (isCorrect) {
+                        correctCount++;
+                    }
+                    
+                    Map<String, Object> detail = new HashMap<>();
+                    detail.put("questionId", questionId);
+                    detail.put("questionText", question.getQuestionText());
+                    detail.put("optionA", question.getOptionA());
+                    detail.put("optionB", question.getOptionB());
+                    detail.put("optionC", question.getOptionC());
+                    detail.put("optionD", question.getOptionD());
+                    detail.put("userAnswer", userAnswer);
+                    detail.put("correctOption", question.getCorrectOption());
+                    detail.put("isCorrect", isCorrect);
+                    
+                    details.add(detail);
+                }
+            }
+        }
+
+        incrementExamCount(userId);
+
+        int pointsEarned = calculatePoints(correctCount);
+        if (pointsEarned > 0) {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null) {
+                user.setPoints(user.getPoints() + pointsEarned);
+                userRepository.save(user);
+            }
+        }
+        
+        result.put("correctCount", correctCount);
+        result.put("details", details);
+        return result;
+    }
+
     public boolean canTakeExam(Integer userId) {
         LocalDate today = LocalDate.now();
         Map<LocalDate, Integer> userExamCount = examCountMap.computeIfAbsent(userId, k -> new HashMap<>());

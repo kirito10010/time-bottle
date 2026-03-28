@@ -77,8 +77,10 @@ public class ExamController {
             return ResponseEntity.badRequest().body(error);
         }
 
-        int correctCount = examService.validateAndSubmitExam(userId, userAnswers);
-
+        Map<String, Object> result = examService.validateAndSubmitExamWithDetails(userId, userAnswers);
+        
+        int correctCount = (int) result.get("correctCount");
+        
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("correctCount", correctCount);
@@ -86,6 +88,7 @@ public class ExamController {
         response.put("message", correctCount >= 3 
             ? "恭喜！答对 " + correctCount + " 题，获得 " + examService.calculatePoints(correctCount) + " 积分" 
             : "很遗憾，答对 " + correctCount + " 题，未获得积分");
+        response.put("details", result.get("details"));
         
         return ResponseEntity.ok(response);
     }
