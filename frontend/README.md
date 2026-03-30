@@ -412,10 +412,11 @@ const fetchAlbumData = async () => {
 
 #### 核心功能
 
-1. **三个标签页**
-   - 商城（市场）
-   - 我的上架
-   - 上架卡片
+1. **四个标签页**
+   - 商城（市场）- 浏览和购买其他用户上架的卡片
+   - 我的上架 - 查看和管理自己上架的卡片
+   - 上架卡片 - 将自己的卡片上架出售
+   - 回收站 - 将不需要的卡片回收换取积分
 
 2. **筛选功能**
    ```javascript
@@ -463,7 +464,24 @@ const fetchAlbumData = async () => {
    };
    ```
 
-5. **弹窗点击外部关闭**
+5. **回收卡片**
+   ```javascript
+   const recycleCard = async () => {
+     const response = await fetch(`${API_BASE}/recycle`, {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+         'Authorization': `Bearer ${token}`
+       },
+       body: JSON.stringify({
+         cardId: selectedRecycleCard.value.cardId,
+         quantity: recycleQuantity.value
+       })
+     });
+   };
+   ```
+
+6. **弹窗点击外部关闭**
    ```javascript
    const handleOverlayMouseDown = (e) => {
      mouseDownOnOverlay.value = e.target.classList.contains('modal-overlay');
@@ -649,6 +667,17 @@ const postData = async (body) => {
 | POST | `/list` | 上架卡片 | `{cardId, unitPrice, quantity}` |
 | POST | `/delist/{id}` | 下架卡片 | - |
 | POST | `/buy/{id}` | 购买卡片 | `{quantity}` |
+| POST | `/recycle` | 回收卡片换积分 | `{cardId, quantity}` |
+
+### 回收站积分价格
+
+| 稀有度 | 积分/张 |
+|--------|---------|
+| 普通 | 2 积分 |
+| 精良 | 8 积分 |
+| 稀有 | 14 积分 |
+| 史诗 | 40 积分 |
+| 传说 | 200 积分 |
 
 ### 管理员接口 `/api/admin/users`
 
@@ -1054,15 +1083,79 @@ export default defineConfig({
 
 ## 数据库表结构
 
-数据库共 15 张表，详见 `../123.txt` 建表 SQL。
+数据库共 15 张表，详见 `正确理解表结构.sql` 建表 SQL。
 
-主要表：
-- `users` - 用户表
-- `anime_card` - 卡片表
-- `user_card` - 用户卡片收集表
-- `consignments` - 积分商城表
-- `points_log` - 积分流水表
-- `questions` - 题库表
+### 用户系统
+
+| 表名 | 说明 | 主要字段 |
+|------|------|----------|
+| `users` | 用户表 | id, username, password_hash, email, role, points, status, avatar, nickname |
+| `points_log` | 积分流水表 | id, user_id, change, type, remark |
+| `password_reset_token` | 密码重置验证码表 | id, email, token, expires_at, used |
+
+### 财务管理
+
+| 表名 | 说明 | 主要字段 |
+|------|------|----------|
+| `bill_categories` | 收支分类表 | id, user_id, name, type, is_default, sort |
+| `bills` | 账单记录表 | id, user_id, category_id, type, account, amount, remark, bill_date |
+
+### 绩效管理
+
+| 表名 | 说明 | 主要字段 |
+|------|------|----------|
+| `production_project_config` | 生产项目配置表 | id, uid, project_name, operation_quota, quality_quota |
+| `daily_performance` | 每日绩效记录表 | id, uid, record_date, project_id, process_type, quota_efficiency, actual_workload, performance_man_days |
+| `overtime_record` | 加班记录表 | id, uid, record_date, overtime_hours, project_id, description |
+| `monthly_salary_record` | 月度薪资记录表 | id, uid, month, period_start_date, period_end_date, attendance_days, basic_salary, net_salary 等 |
+
+### 集卡游戏
+
+| 表名 | 说明 | 主要字段 |
+|------|------|----------|
+| `anime_card` | 卡片总表 | id, series_name, name, type, rarity_level, image_url |
+| `user_card` | 用户卡片收集表 | id, uid, card_id, quantity, obtained_at |
+| `consignments` | 积分商城寄售表 | id, seller_id, card_id, unit_price, quantity |
+| `card_gifts` | 卡牌赠送记录表 | id, sender_id, receiver_id, card_id, quantity, status |
+| `card_exchanges` | 卡牌交换申请表 | id, sender_id, receiver_id, sender_card_id, receiver_card_id, status |
+
+### 题库系统
+
+| 表名 | 说明 | 主要字段 |
+|------|------|----------|
+| `questions` | 选择题题库表 | id, question_text, option_a, option_b, option_c, option_d, correct_option |
+
+### 用户角色说明
+
+| role 值 | 角色 | 说明 |
+|---------|------|------|
+| `'0'` | 普通用户 | 基础功能权限 |
+| `'1'` | VIP用户 | 高级功能权限 |
+| `'2'` | 管理员 | 后台管理权限 |
+
+### 卡片稀有度说明
+
+| rarity_level | 稀有度 | CSS类名 | 抽卡概率（实际） |
+|--------------|--------|---------|------------------|
+| 1 | 普通 | common | 70% |
+| 2 | 精良 | uncommon | 20% |
+| 3 | 稀有 | rare | 7% |
+| 4 | 史诗 | epic | 2% |
+| 5 | 传说 | legendary | 1% |
+
+> 注：SQL文件中的注释概率与实际代码不一致，以上为实际使用的抽卡概率。
+
+### 积分变动类型
+
+| type 值 | 说明 |
+|---------|------|
+| `sign_in` | 签到奖励 |
+| `task` | 任务奖励 |
+| `accounting` | 记账奖励 |
+| `draw` | 抽卡扣除 |
+| `exchange` | 兑换消耗 |
+| `recycle` | 卡片回收 |
+| `admin` | 管理员调整 |
 
 ---
 

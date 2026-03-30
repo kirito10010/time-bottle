@@ -26,7 +26,6 @@
           <button 
             class="option-btn"
             :class="{ 'selected': selectedAnswer === 'A' }"
-            :disabled="showAnswer"
             @click="selectAnswer('A')"
           >
             A. {{ currentQuestion.optionA }}
@@ -34,7 +33,6 @@
           <button 
             class="option-btn"
             :class="{ 'selected': selectedAnswer === 'B' }"
-            :disabled="showAnswer"
             @click="selectAnswer('B')"
           >
             B. {{ currentQuestion.optionB }}
@@ -42,7 +40,6 @@
           <button 
             class="option-btn"
             :class="{ 'selected': selectedAnswer === 'C' }"
-            :disabled="showAnswer"
             @click="selectAnswer('C')"
           >
             C. {{ currentQuestion.optionC }}
@@ -50,16 +47,15 @@
           <button 
             class="option-btn"
             :class="{ 'selected': selectedAnswer === 'D' }"
-            :disabled="showAnswer"
             @click="selectAnswer('D')"
           >
             D. {{ currentQuestion.optionD }}
           </button>
         </div>
         
-        <div v-if="showAnswer" class="answer-feedback">
+        <div v-if="selectedAnswer" class="answer-feedback">
           <p class="selected-text">已选择：{{ selectedAnswer }}</p>
-          <button class="next-btn" @click="nextQuestion">
+          <button class="next-btn" @click="confirmAnswer">
             {{ currentIndex < questions.length - 1 ? '下一题' : '提交答案' }}
           </button>
         </div>
@@ -136,7 +132,6 @@ const examStarted = ref(false);
 const examFinished = ref(false);
 const currentIndex = ref(0);
 const selectedAnswer = ref(null);
-const showAnswer = ref(false);
 const correctCount = ref(0);
 const pointsEarned = ref(0);
 
@@ -175,6 +170,7 @@ const startExam = async () => {
     correctCount.value = 0;
     pointsEarned.value = 0;
     userAnswers.value = [];
+    selectedAnswer.value = null;
   } catch (error) {
     console.error('开始考试失败:', error);
     ElMessage.error('网络错误，请稍后重试');
@@ -182,21 +178,23 @@ const startExam = async () => {
 };
 
 const selectAnswer = (option) => {
-  if (showAnswer.value) return;
   selectedAnswer.value = option;
-  showAnswer.value = true;
+};
+
+const confirmAnswer = () => {
+  if (!selectedAnswer.value) {
+    ElMessage.warning('请先选择一个答案');
+    return;
+  }
   
   userAnswers.value.push({
     questionId: currentQuestion.value.id,
-    answer: option
+    answer: selectedAnswer.value
   });
-};
-
-const nextQuestion = () => {
+  
   if (currentIndex.value < questions.value.length - 1) {
     currentIndex.value++;
     selectedAnswer.value = null;
-    showAnswer.value = false;
   } else {
     submitExam();
   }
@@ -245,7 +243,6 @@ const resetExam = () => {
   examFinished.value = false;
   currentIndex.value = 0;
   selectedAnswer.value = null;
-  showAnswer.value = false;
   correctCount.value = 0;
   pointsEarned.value = 0;
   questions.value = [];

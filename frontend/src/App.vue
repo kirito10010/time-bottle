@@ -2,13 +2,14 @@
 import { ref, onMounted, onUnmounted, watch, provide, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import UserProfileEdit from './components/UserProfileEdit.vue';
-import { ElConfigProvider, ElMessage } from 'element-plus';
+import { ElConfigProvider, ElMessage, ElMessageBox } from 'element-plus';
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs';
 
 const router = useRouter();
 const route = useRoute();
 
 const isLoggedIn = ref(false);
+const showTokenExpiredModal = ref(false);
 
 const userInfo = ref({
   username: '用户名',
@@ -33,6 +34,53 @@ const expandedMenus = ref({
 const sidebarVisible = ref(true);
 const showUserMenu = ref(false);
 const showUserProfileEdit = ref(false);
+
+const handleTokenExpired = () => {
+  if (showTokenExpiredModal.value) return;
+  showTokenExpiredModal.value = true;
+  
+  ElMessageBox.alert('您的登录已过期，请重新登录', '登录过期', {
+    confirmButtonText: '重新登录',
+    type: 'warning',
+    showClose: false,
+    closeOnClickModal: false,
+    closeOnPressEscape: false
+  }).then(() => {
+    showTokenExpiredModal.value = false;
+    logout();
+  }).catch(() => {
+    showTokenExpiredModal.value = false;
+    logout();
+  });
+};
+
+const authFetch = async (url, options = {}) => {
+  const token = localStorage.getItem('token');
+  const headers = {
+    ...options.headers
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (options.body && typeof options.body === 'string' && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+  
+  const response = await fetch(url, {
+    ...options,
+    headers
+  });
+  
+  if (response.status === 401) {
+    handleTokenExpired();
+    throw new Error('Unauthorized');
+  }
+  
+  return response;
+};
+
+provide('authFetch', authFetch);
+provide('handleTokenExpired', handleTokenExpired);
 
 const toggleSidebar = () => {
   sidebarVisible.value = !sidebarVisible.value;
@@ -146,16 +194,16 @@ const fetchPointsStatus = async () => {
   if (!token) return;
   
   try {
-    const response = await fetch('/api/points/status', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (response.ok) {
+    const response = await authFetch('/api/points/status');
+    if (response && response.ok) {
       const data = await response.json();
       userPoints.value = data.points || 0;
       hasSignedIn.value = data.hasSignedIn || false;
     }
   } catch (error) {
-    console.error('获取积分状态失败:', error);
+    if (error.message !== 'Unauthorized') {
+      console.error('获取积分状态失败:', error);
+    }
   }
 };
 

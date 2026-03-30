@@ -31,12 +31,6 @@ public class ExamController {
             return ResponseEntity.status(401).body(error);
         }
 
-        if (!examService.canTakeExam(userId)) {
-            Map<String, String> error = new HashMap<>();
-            error.put("message", "今日考试次数已用完，请明天再来");
-            return ResponseEntity.status(429).body(error);
-        }
-
         List<Question> questions = examService.getRandomQuestions(5);
         
         List<Map<String, Object>> questionList = questions.stream().map(q -> {
@@ -52,7 +46,6 @@ public class ExamController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("questions", questionList);
-        response.put("remainingExams", examService.getRemainingExamsToday(userId));
         return ResponseEntity.ok(response);
     }
 

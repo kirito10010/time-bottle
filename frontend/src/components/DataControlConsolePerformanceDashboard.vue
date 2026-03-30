@@ -169,7 +169,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, markRaw, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, markRaw, nextTick, onActivated } from 'vue';
 import { ElMessage, ElUpload, ElSelect, ElOption, ElInput } from 'element-plus';
 import 'element-plus/dist/index.css';
 import * as echarts from 'echarts';
@@ -284,26 +284,56 @@ const clearData = () => {
 };
 
 const initCharts = () => {
-  if (chart1Ref.value) {
-    if (chart1Instance) chart1Instance.dispose();
-    chart1Instance = markRaw(echarts.init(chart1Ref.value));
-    chart1Instance.on('click', () => openChartModal('chart1'));
-  }
-  if (chart2Ref.value) {
-    if (chart2Instance) chart2Instance.dispose();
-    chart2Instance = markRaw(echarts.init(chart2Ref.value));
-    chart2Instance.on('click', () => openChartModal('chart2'));
-  }
-  if (chart3Ref.value) {
-    if (chart3Instance) chart3Instance.dispose();
-    chart3Instance = markRaw(echarts.init(chart3Ref.value));
-    chart3Instance.on('click', () => openChartModal('chart3'));
-  }
-  if (chart4Ref.value) {
-    if (chart4Instance) chart4Instance.dispose();
-    chart4Instance = markRaw(echarts.init(chart4Ref.value));
-    chart4Instance.on('click', () => openChartModal('chart4'));
-  }
+  const checkAndInit = () => {
+    let allReady = true;
+    
+    if (chart1Ref.value) {
+      const rect = chart1Ref.value.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) allReady = false;
+    }
+    if (chart2Ref.value) {
+      const rect = chart2Ref.value.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) allReady = false;
+    }
+    if (chart3Ref.value) {
+      const rect = chart3Ref.value.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) allReady = false;
+    }
+    if (chart4Ref.value) {
+      const rect = chart4Ref.value.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) allReady = false;
+    }
+    
+    if (!allReady) {
+      setTimeout(() => checkAndInit(), 100);
+      return;
+    }
+    
+    if (chart1Ref.value) {
+      if (chart1Instance) chart1Instance.dispose();
+      chart1Instance = markRaw(echarts.init(chart1Ref.value));
+      chart1Instance.on('click', () => openChartModal('chart1'));
+    }
+    if (chart2Ref.value) {
+      if (chart2Instance) chart2Instance.dispose();
+      chart2Instance = markRaw(echarts.init(chart2Ref.value));
+      chart2Instance.on('click', () => openChartModal('chart2'));
+    }
+    if (chart3Ref.value) {
+      if (chart3Instance) chart3Instance.dispose();
+      chart3Instance = markRaw(echarts.init(chart3Ref.value));
+      chart3Instance.on('click', () => openChartModal('chart3'));
+    }
+    if (chart4Ref.value) {
+      if (chart4Instance) chart4Instance.dispose();
+      chart4Instance = markRaw(echarts.init(chart4Ref.value));
+      chart4Instance.on('click', () => openChartModal('chart4'));
+    }
+    
+    updateCharts();
+  };
+  
+  checkAndInit();
 };
 
 const destroyCharts = () => {
@@ -884,6 +914,17 @@ const handleResize = () => {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize);
+});
+
+onActivated(() => {
+  setTimeout(() => {
+    if (chart1Instance || chart2Instance || chart3Instance || chart4Instance) {
+      handleResize();
+      updateCharts();
+    } else {
+      initCharts();
+    }
+  }, 100);
 });
 
 onUnmounted(() => {

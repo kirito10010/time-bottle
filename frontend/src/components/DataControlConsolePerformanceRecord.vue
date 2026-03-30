@@ -938,7 +938,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, onUnmounted, markRaw } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted, markRaw, nextTick, onActivated } from 'vue';
 import { ElMessage, ElDatePicker, ElSelect, ElOption, ElMessageBox, ElInput, ElInputNumber } from 'element-plus';
 import zhCn from 'element-plus/es/locale/lang/zh-cn';
 import * as echarts from 'echarts';
@@ -1220,8 +1220,13 @@ const getChartDateRange = () => {
     endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 6);
   } else if (chartTimeRange.value === 'month') {
-    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 26);
-    endDate = new Date(today.getFullYear(), today.getMonth(), 25);
+    if (today.getDate() >= 26) {
+      startDate = new Date(today.getFullYear(), today.getMonth(), 26);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 25);
+    } else {
+      startDate = new Date(today.getFullYear(), today.getMonth() - 1, 26);
+      endDate = new Date(today.getFullYear(), today.getMonth(), 25);
+    }
   } else if (chartSelectedMonth.value) {
     const [year, month] = chartSelectedMonth.value.split('-');
     const monthNum = parseInt(month);
@@ -1231,8 +1236,13 @@ const getChartDateRange = () => {
     startDate = new Date(chartDateRange.value[0]);
     endDate = new Date(chartDateRange.value[1]);
   } else {
-    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 26);
-    endDate = new Date(today.getFullYear(), today.getMonth(), 25);
+    if (today.getDate() >= 26) {
+      startDate = new Date(today.getFullYear(), today.getMonth(), 26);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 25);
+    } else {
+      startDate = new Date(today.getFullYear(), today.getMonth() - 1, 26);
+      endDate = new Date(today.getFullYear(), today.getMonth(), 25);
+    }
   }
   
   return {
@@ -2118,13 +2128,22 @@ watch(showOvertimeReport, (val) => {
 
 // 图表相关方法
 const initChart = () => {
-  if (chartRef.value) {
-    if (chartInstance) {
-      chartInstance.dispose();
-    }
-    chartInstance = markRaw(echarts.init(chartRef.value));
-    updateChart();
+  if (!chartRef.value) {
+    setTimeout(() => initChart(), 100);
+    return;
   }
+  
+  const rect = chartRef.value.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) {
+    setTimeout(() => initChart(), 100);
+    return;
+  }
+  
+  if (chartInstance) {
+    chartInstance.dispose();
+  }
+  chartInstance = markRaw(echarts.init(chartRef.value));
+  updateChart();
 };
 
 const updateChart = () => {
@@ -2141,8 +2160,13 @@ const updateChart = () => {
     endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 6);
   } else if (chartTimeRange.value === 'month') {
-    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 26);
-    endDate = new Date(today.getFullYear(), today.getMonth(), 25);
+    if (today.getDate() >= 26) {
+      startDate = new Date(today.getFullYear(), today.getMonth(), 26);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 25);
+    } else {
+      startDate = new Date(today.getFullYear(), today.getMonth() - 1, 26);
+      endDate = new Date(today.getFullYear(), today.getMonth(), 25);
+    }
   } else if (chartSelectedMonth.value) {
     const [year, month] = chartSelectedMonth.value.split('-');
     const monthNum = parseInt(month);
@@ -2152,8 +2176,13 @@ const updateChart = () => {
     startDate = new Date(chartDateRange.value[0]);
     endDate = new Date(chartDateRange.value[1]);
   } else {
-    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 26);
-    endDate = new Date(today.getFullYear(), today.getMonth(), 25);
+    if (today.getDate() >= 26) {
+      startDate = new Date(today.getFullYear(), today.getMonth(), 26);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 25);
+    } else {
+      startDate = new Date(today.getFullYear(), today.getMonth() - 1, 26);
+      endDate = new Date(today.getFullYear(), today.getMonth(), 25);
+    }
   }
   
   const startDateStr = formatDateToLocal(startDate);
@@ -2327,14 +2356,18 @@ const handleResize = () => {
 
 let resizeObserver = null;
 
-onMounted(() => {
+onMounted(async () => {
   loadSalaryConfig();
-  fetchProjects();
-  fetchPerformances();
-  fetchOvertimes();
-  fetchSalaries();
+  await Promise.all([
+    fetchProjects(),
+    fetchPerformances(),
+    fetchOvertimes(),
+    fetchSalaries()
+  ]);
   
   window.addEventListener('resize', handleResize);
+  
+  await nextTick();
   
   if (chartRef.value) {
     resizeObserver = new ResizeObserver(() => {
@@ -2345,7 +2378,7 @@ onMounted(() => {
   
   setTimeout(() => {
     initChart();
-  }, 100);
+  }, 200);
 });
 
 onUnmounted(() => {
@@ -2358,6 +2391,17 @@ onUnmounted(() => {
     chartInstance.dispose();
     chartInstance = null;
   }
+});
+
+onActivated(() => {
+  setTimeout(() => {
+    if (chartInstance) {
+      chartInstance.resize();
+      updateChart();
+    } else {
+      initChart();
+    }
+  }, 100);
 });
 </script>
 
