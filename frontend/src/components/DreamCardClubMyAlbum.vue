@@ -47,7 +47,7 @@
                       card.owned ? 'owned' : '',
                       getRarityClass(card.rarityLevel)
                     ]"
-                    @click="card.owned && openCardModal(card)"
+                    @click="card.owned && open3DViewer(card)"
                   >
                     <div class="frame-border">
                       <span class="frame-corner tl"></span>
@@ -123,42 +123,18 @@
       </div>
     </div>
     
-    <!-- 卡片放大弹窗 -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="showCardModal" class="card-modal-overlay" @click="closeCardModal">
-          <div class="card-modal-container" @click.stop>
-            <button class="modal-close-btn" @click="closeCardModal">×</button>
-            <div class="modal-card-wrapper" :class="getRarityClass(selectedCard?.rarityLevel)">
-              <div class="modal-card-glow"></div>
-              <img 
-                :src="selectedCard?.imageUrl" 
-                :alt="selectedCard?.name" 
-                class="modal-card-image"
-              />
-            </div>
-            <div class="modal-card-info">
-              <h3 class="modal-card-name">{{ selectedCard?.name }}</h3>
-              <div class="modal-card-meta">
-                <span class="modal-card-series">{{ selectedCard?.seriesName }}</span>
-                <span class="modal-card-type" :class="getRarityClass(selectedCard?.rarityLevel)">
-                  {{ selectedCard?.type }}
-                </span>
-              </div>
-              <div class="modal-card-quantity">
-                <span class="quantity-label">拥有数量</span>
-                <span class="quantity-value">✨ x{{ selectedCard?.quantity }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <!-- 3D 卡片展示 -->
+    <Card3DViewer 
+      v-if="show3DViewer && selectedCard" 
+      :card="selectedCard" 
+      @close="close3DViewer"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import Card3DViewer from './Card3DViewer.vue';
 
 const allCards = ref([]);
 const cards = ref([]);
@@ -173,7 +149,7 @@ const completionRate = ref(0);
 const currentPage = ref(0);
 const cardsPerPage = 24;
 
-const showCardModal = ref(false);
+const show3DViewer = ref(false);
 const selectedCard = ref(null);
 
 const totalPages = computed(() => {
@@ -208,14 +184,14 @@ const nextPage = () => {
   }
 };
 
-const openCardModal = (card) => {
+const open3DViewer = (card) => {
   selectedCard.value = card;
-  showCardModal.value = true;
+  show3DViewer.value = true;
   document.body.style.overflow = 'hidden';
 };
 
-const closeCardModal = () => {
-  showCardModal.value = false;
+const close3DViewer = () => {
+  show3DViewer.value = false;
   selectedCard.value = null;
   document.body.style.overflow = '';
 };
@@ -632,114 +608,231 @@ onMounted(() => {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
 }
 
-.photo-frame.legendary {
+.photo-frame.legendary.owned:hover {
+  transform: translateY(-6px) scale(1.05) translateZ(0);
   box-shadow: 
-    0 0 15px rgba(255, 215, 0, 0.6),
-    0 0 30px rgba(255, 215, 0, 0.4),
-    0 2px 8px rgba(0, 0, 0, 0.12),
+    0 0 40px rgba(255, 215, 0, 0.9),
+    0 0 80px rgba(255, 215, 0, 0.5),
+    0 15px 35px rgba(0, 0, 0, 0.3);
+  animation: hover-legendary 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes hover-legendary {
+  from {
+    box-shadow: 
+      0 0 40px rgba(255, 215, 0, 0.9),
+      0 0 80px rgba(255, 215, 0, 0.5),
+      0 15px 35px rgba(0, 0, 0, 0.3);
+  }
+  to {
+    box-shadow: 
+      0 0 50px rgba(255, 215, 0, 1),
+      0 0 100px rgba(255, 215, 0, 0.6),
+      0 20px 45px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.photo-frame.epic.owned:hover {
+  transform: translateY(-5px) scale(1.04) translateZ(0);
+  box-shadow: 
+    0 0 30px rgba(168, 85, 247, 0.8),
+    0 0 60px rgba(168, 85, 247, 0.4),
+    0 12px 30px rgba(0, 0, 0, 0.28);
+  animation: hover-epic 1s ease-in-out infinite alternate;
+}
+
+@keyframes hover-epic {
+  from {
+    box-shadow: 
+      0 0 30px rgba(168, 85, 247, 0.8),
+      0 0 60px rgba(168, 85, 247, 0.4),
+      0 12px 30px rgba(0, 0, 0, 0.28);
+  }
+  to {
+    box-shadow: 
+      0 0 40px rgba(168, 85, 247, 0.95),
+      0 0 80px rgba(168, 85, 247, 0.5),
+      0 16px 40px rgba(0, 0, 0, 0.32);
+  }
+}
+
+.photo-frame.rare.owned:hover {
+  transform: translateY(-4px) scale(1.035) translateZ(0);
+  box-shadow: 
+    0 0 25px rgba(59, 130, 246, 0.7),
+    0 0 50px rgba(59, 130, 246, 0.35),
+    0 10px 25px rgba(0, 0, 0, 0.25);
+  animation: hover-rare 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes hover-rare {
+  from {
+    box-shadow: 
+      0 0 25px rgba(59, 130, 246, 0.7),
+      0 0 50px rgba(59, 130, 246, 0.35),
+      0 10px 25px rgba(0, 0, 0, 0.25);
+  }
+  to {
+    box-shadow: 
+      0 0 32px rgba(59, 130, 246, 0.85),
+      0 0 64px rgba(59, 130, 246, 0.42),
+      0 14px 32px rgba(0, 0, 0, 0.28);
+  }
+}
+
+.photo-frame.uncommon.owned:hover {
+  transform: translateY(-4px) scale(1.03) translateZ(0);
+  box-shadow: 
+    0 0 18px rgba(34, 197, 94, 0.6),
+    0 0 36px rgba(34, 197, 94, 0.3),
+    0 8px 20px rgba(0, 0, 0, 0.22);
+  animation: hover-uncommon 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes hover-uncommon {
+  from {
+    box-shadow: 
+      0 0 18px rgba(34, 197, 94, 0.6),
+      0 0 36px rgba(34, 197, 94, 0.3),
+      0 8px 20px rgba(0, 0, 0, 0.22);
+  }
+  to {
+    box-shadow: 
+      0 0 24px rgba(34, 197, 94, 0.75),
+      0 0 48px rgba(34, 197, 94, 0.38),
+      0 12px 28px rgba(0, 0, 0, 0.25);
+  }
+}
+
+.photo-frame.common.owned:hover {
+  transform: translateY(-3px) scale(1.02) translateZ(0);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+}
+
+.photo-frame.legendary {
+  border: 3px solid #ffd700;
+  box-shadow: 
+    0 0 20px rgba(255, 215, 0, 0.6),
+    0 0 40px rgba(255, 215, 0, 0.3),
+    0 4px 16px rgba(255, 255, 255, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  animation: glow-album-legendary 2s ease-in-out infinite alternate;
+  animation: glow-legendary-border 2s ease-in-out infinite alternate;
 }
 
 .photo-frame.epic {
+  border: 2.5px solid #a855f7;
   box-shadow: 
-    0 0 12px rgba(168, 85, 247, 0.6),
-    0 0 24px rgba(168, 85, 247, 0.4),
-    0 2px 8px rgba(0, 0, 0, 0.12),
+    0 0 15px rgba(168, 85, 247, 0.5),
+    0 0 30px rgba(168, 85, 247, 0.25),
+    0 4px 16px rgba(255, 255, 255, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  animation: glow-album-epic 2s ease-in-out infinite alternate;
+  animation: glow-epic-border 2s ease-in-out infinite alternate;
 }
 
 .photo-frame.rare {
+  border: 2px solid #3b82f6;
   box-shadow: 
-    0 0 10px rgba(59, 130, 246, 0.6),
-    0 0 20px rgba(59, 130, 246, 0.4),
-    0 2px 8px rgba(0, 0, 0, 0.12),
+    0 0 12px rgba(59, 130, 246, 0.4),
+    0 0 24px rgba(59, 130, 246, 0.2),
+    0 4px 16px rgba(255, 255, 255, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  animation: glow-album-rare 2s ease-in-out infinite alternate;
+  animation: glow-rare-border 2s ease-in-out infinite alternate;
 }
 
 .photo-frame.uncommon {
+  border: 2px solid #22c55e;
   box-shadow: 
-    0 0 8px rgba(34, 197, 94, 0.6),
-    0 0 16px rgba(34, 197, 94, 0.4),
-    0 2px 8px rgba(0, 0, 0, 0.12),
+    0 0 8px rgba(34, 197, 94, 0.35),
+    0 0 16px rgba(34, 197, 94, 0.15),
+    0 4px 16px rgba(255, 255, 255, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  animation: glow-album-uncommon 2s ease-in-out infinite alternate;
+  animation: glow-uncommon-border 2s ease-in-out infinite alternate;
 }
 
 .photo-frame.common {
+  border: 2px solid #9ca3af;
   box-shadow: 
-    0 0 6px rgba(156, 163, 175, 0.5),
-    0 0 12px rgba(156, 163, 175, 0.3),
-    0 2px 8px rgba(0, 0, 0, 0.12),
+    0 4px 16px rgba(255, 255, 255, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-@keyframes glow-album-legendary {
+@keyframes glow-legendary-border {
   from {
     box-shadow: 
-      0 0 15px rgba(255, 215, 0, 0.6),
-      0 0 30px rgba(255, 215, 0, 0.4),
-      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 20px rgba(255, 215, 0, 0.6),
+      0 0 40px rgba(255, 215, 0, 0.3),
+      0 4px 16px rgba(255, 255, 255, 0.5),
+      0 2px 8px rgba(0, 0, 0, 0.15),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
   to {
     box-shadow: 
-      0 0 25px rgba(255, 215, 0, 0.9),
-      0 0 50px rgba(255, 215, 0, 0.6),
-      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 30px rgba(255, 215, 0, 0.8),
+      0 0 60px rgba(255, 215, 0, 0.4),
+      0 6px 24px rgba(255, 255, 255, 0.6),
+      0 3px 12px rgba(0, 0, 0, 0.2),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 }
 
-@keyframes glow-album-epic {
+@keyframes glow-epic-border {
   from {
     box-shadow: 
-      0 0 12px rgba(168, 85, 247, 0.6),
-      0 0 24px rgba(168, 85, 247, 0.4),
-      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 15px rgba(168, 85, 247, 0.5),
+      0 0 30px rgba(168, 85, 247, 0.25),
+      0 4px 16px rgba(255, 255, 255, 0.5),
+      0 2px 8px rgba(0, 0, 0, 0.15),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
   to {
     box-shadow: 
-      0 0 20px rgba(168, 85, 247, 0.9),
-      0 0 40px rgba(168, 85, 247, 0.6),
-      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 22px rgba(168, 85, 247, 0.7),
+      0 0 44px rgba(168, 85, 247, 0.35),
+      0 6px 24px rgba(255, 255, 255, 0.6),
+      0 3px 12px rgba(0, 0, 0, 0.2),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 }
 
-@keyframes glow-album-rare {
+@keyframes glow-rare-border {
   from {
     box-shadow: 
-      0 0 10px rgba(59, 130, 246, 0.6),
-      0 0 20px rgba(59, 130, 246, 0.4),
-      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 12px rgba(59, 130, 246, 0.4),
+      0 0 24px rgba(59, 130, 246, 0.2),
+      0 4px 16px rgba(255, 255, 255, 0.5),
+      0 2px 8px rgba(0, 0, 0, 0.15),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
   to {
     box-shadow: 
-      0 0 16px rgba(59, 130, 246, 0.9),
-      0 0 32px rgba(59, 130, 246, 0.6),
-      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 18px rgba(59, 130, 246, 0.55),
+      0 0 36px rgba(59, 130, 246, 0.28),
+      0 6px 24px rgba(255, 255, 255, 0.6),
+      0 3px 12px rgba(0, 0, 0, 0.2),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 }
 
-@keyframes glow-album-uncommon {
+@keyframes glow-uncommon-border {
   from {
     box-shadow: 
-      0 0 8px rgba(34, 197, 94, 0.6),
-      0 0 16px rgba(34, 197, 94, 0.4),
-      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 8px rgba(34, 197, 94, 0.35),
+      0 0 16px rgba(34, 197, 94, 0.15),
+      0 4px 16px rgba(255, 255, 255, 0.5),
+      0 2px 8px rgba(0, 0, 0, 0.15),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
   to {
     box-shadow: 
-      0 0 12px rgba(34, 197, 94, 0.9),
-      0 0 24px rgba(34, 197, 94, 0.6),
-      0 2px 8px rgba(0, 0, 0, 0.12),
+      0 0 12px rgba(34, 197, 94, 0.5),
+      0 0 24px rgba(34, 197, 94, 0.22),
+      0 6px 24px rgba(255, 255, 255, 0.6),
+      0 3px 12px rgba(0, 0, 0, 0.2),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 }
@@ -764,6 +857,67 @@ onMounted(() => {
 
 .photo-frame.owned .frame-corner {
   border-color: #d4a574;
+}
+
+.photo-frame.legendary .frame-corner {
+  width: 18px;
+  height: 18px;
+  border-width: 3px;
+  border-color: #ffd700;
+}
+
+.photo-frame.legendary .frame-corner::before {
+  content: '★';
+  position: absolute;
+  font-size: 8px;
+  color: #ffd700;
+}
+
+.photo-frame.legendary .frame-corner.tl::before { top: -2px; left: -2px; }
+.photo-frame.legendary .frame-corner.tr::before { top: -2px; right: -2px; }
+.photo-frame.legendary .frame-corner.bl::before { bottom: -2px; left: -2px; }
+.photo-frame.legendary .frame-corner.br::before { bottom: -2px; right: -2px; }
+
+.photo-frame.epic .frame-corner {
+  width: 16px;
+  height: 16px;
+  border-width: 2.5px;
+  border-color: #a855f7;
+}
+
+.photo-frame.epic .frame-corner::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #a855f7;
+  border-radius: 50%;
+}
+
+.photo-frame.epic .frame-corner.tl::after { top: 0; left: 0; }
+.photo-frame.epic .frame-corner.tr::after { top: 0; right: 0; }
+.photo-frame.epic .frame-corner.bl::after { bottom: 0; left: 0; }
+.photo-frame.epic .frame-corner.br::after { bottom: 0; right: 0; }
+
+.photo-frame.rare .frame-corner {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+  border-color: #3b82f6;
+}
+
+.photo-frame.uncommon .frame-corner {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+  border-color: #22c55e;
+}
+
+.photo-frame.common .frame-corner {
+  width: 10px;
+  height: 10px;
+  border-width: 1.5px;
+  border-color: #9ca3af;
 }
 
 .frame-corner.tl {
@@ -1363,5 +1517,24 @@ onMounted(() => {
 .modal-leave-to .card-modal-container {
   transform: scale(0.85) translateY(30px);
   opacity: 0;
+}
+
+.btn-view-3d {
+  margin-top: 16px;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-view-3d:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
 }
 </style>

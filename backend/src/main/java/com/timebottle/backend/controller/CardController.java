@@ -26,14 +26,24 @@ public class CardController {
     @GetMapping
     public ResponseEntity<?> getAllCards(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        Page<AnimeCard> cardPage = cardService.getCardsPage(page, size);
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String series,
+            @RequestParam(required = false) Integer rarity) {
+        
+        Page<AnimeCard> cardPage;
+        if (keyword != null || series != null || rarity != null) {
+            cardPage = cardService.getCardsPageWithFilter(keyword, series, rarity, page, size);
+        } else {
+            cardPage = cardService.getCardsPage(page, size);
+        }
         
         Map<String, Object> response = new HashMap<>();
         response.put("items", cardPage.getContent());
         response.put("currentPage", cardPage.getNumber());
         response.put("totalPages", cardPage.getTotalPages());
         response.put("totalElements", cardPage.getTotalElements());
+        response.put("seriesList", cardService.getAllSeriesNames());
         
         return ResponseEntity.ok(response);
     }

@@ -423,8 +423,8 @@ const getRarityClass = (rarityLevel) => {
 
 const getAvatarUrl = (avatar) => {
   if (!avatar) return '/default-avatar.svg';
-  if (avatar === 'default-avatar.png') return '/default-avatar.svg';
-  if (avatar.startsWith('http')) return avatar;
+  if (avatar === 'default-avatar.svg' || avatar === 'default-avatar.png') return '/default-avatar.svg';
+  if (avatar.startsWith('http://') || avatar.startsWith('https://')) return avatar;
   return `/Usersimg/${avatar}`;
 };
 

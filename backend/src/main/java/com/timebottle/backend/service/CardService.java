@@ -63,6 +63,32 @@ public class CardService {
     public Page<AnimeCard> getCardsPage(int page, int size) {
         return animeCardRepository.findAllByOrderByIdDesc(PageRequest.of(page, size));
     }
+    
+    public Page<AnimeCard> getCardsPageWithFilter(String keyword, String series, Integer rarity, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size);
+        
+        boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
+        boolean hasSeries = series != null && !series.trim().isEmpty();
+        boolean hasRarity = rarity != null;
+        
+        if (hasKeyword && hasSeries && hasRarity) {
+            return animeCardRepository.findByNameContainingAndSeriesNameAndRarityLevel(keyword, series, rarity, pageRequest);
+        } else if (hasKeyword && hasSeries) {
+            return animeCardRepository.findByNameContainingAndSeriesName(keyword, series, pageRequest);
+        } else if (hasKeyword && hasRarity) {
+            return animeCardRepository.findByNameContainingAndRarityLevel(keyword, rarity, pageRequest);
+        } else if (hasSeries && hasRarity) {
+            return animeCardRepository.findBySeriesNameAndRarityLevel(series, rarity, pageRequest);
+        } else if (hasKeyword) {
+            return animeCardRepository.findByNameContaining(keyword, pageRequest);
+        } else if (hasSeries) {
+            return animeCardRepository.findBySeriesName(series, pageRequest);
+        } else if (hasRarity) {
+            return animeCardRepository.findByRarityLevel(rarity, pageRequest);
+        } else {
+            return animeCardRepository.findAllByOrderByIdDesc(pageRequest);
+        }
+    }
 
     public long getTotalCardCount() {
         return animeCardRepository.count();

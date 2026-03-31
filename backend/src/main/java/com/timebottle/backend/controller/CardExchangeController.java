@@ -94,14 +94,22 @@ public class CardExchangeController {
     @GetMapping("/search-cards")
     public ResponseEntity<?> searchCards(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String series,
+            @RequestParam(required = false) Integer rarity,
             @RequestHeader(value = "Authorization", required = false) String token) {
         Integer userId = extractUserId(token);
         if (userId == null) {
             return ResponseEntity.status(401).body(Map.of("message", "请先登录"));
         }
         
-        List<Map<String, Object>> cards = cardExchangeService.searchCards(keyword);
+        List<Map<String, Object>> cards = cardExchangeService.searchCards(keyword, series, rarity);
         return ResponseEntity.ok(Map.of("cards", cards));
+    }
+    
+    @GetMapping("/series")
+    public ResponseEntity<?> getAllSeries() {
+        List<String> series = cardExchangeService.getAllSeries();
+        return ResponseEntity.ok(Map.of("series", series));
     }
 
     @PostMapping("/gift")

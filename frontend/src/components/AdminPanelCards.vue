@@ -10,6 +10,25 @@
     </div>
     
     <div v-if="activeTab === 'cards'" class="cards-section">
+      <div class="filter-row">
+        <div class="search-bar">
+          <input type="text" v-model="searchKeyword" placeholder="搜索卡片名称或系列..." @keyup.enter="searchCards">
+          <button class="btn-search" @click="searchCards">搜索</button>
+        </div>
+        <select v-model="selectedSeries" @change="searchCards" class="filter-select">
+          <option value="">全部系列</option>
+          <option v-for="series in seriesList" :key="series" :value="series">{{ series }}</option>
+        </select>
+        <select v-model="selectedRarity" @change="searchCards" class="filter-select">
+          <option value="">全部稀有度</option>
+          <option value="1">普通</option>
+          <option value="2">精良</option>
+          <option value="3">稀有</option>
+          <option value="4">史诗</option>
+          <option value="5">传说</option>
+        </select>
+      </div>
+      
       <div class="section-header">
         <h3>卡片列表 (共 {{ totalCards }} 张)</h3>
         <button class="btn-add" @click="openAddModal">+ 添加卡片</button>
@@ -158,6 +177,11 @@ const loading = ref(false);
 const saving = ref(false);
 const imageLoadError = ref(false);
 
+const searchKeyword = ref('');
+const selectedSeries = ref('');
+const selectedRarity = ref('');
+const seriesList = ref([]);
+
 const cards = ref([]);
 const currentPage = ref(0);
 const totalPages = ref(0);
@@ -215,13 +239,30 @@ const truncateUrl = (url) => {
 const fetchCards = async () => {
   loading.value = true;
   try {
-    const response = await fetch(`/api/cards?page=${currentPage.value}&size=${pageSize}`);
+    const params = new URLSearchParams();
+    params.append('page', currentPage.value);
+    params.append('size', pageSize);
+    if (searchKeyword.value.trim()) {
+      params.append('keyword', searchKeyword.value.trim());
+    }
+    if (selectedSeries.value) {
+      params.append('series', selectedSeries.value);
+    }
+    if (selectedRarity.value) {
+      params.append('rarity', selectedRarity.value);
+    }
+    
+    const response = await fetch(`/api/cards?${params.toString()}`);
     if (response.ok) {
       const data = await response.json();
       cards.value = data.items || [];
       currentPage.value = data.currentPage || 0;
       totalPages.value = data.totalPages || 0;
       totalCards.value = data.totalElements || 0;
+      
+      if (data.seriesList) {
+        seriesList.value = data.seriesList;
+      }
     } else {
       ElMessage.error('获取卡片列表失败');
     }
@@ -231,6 +272,23 @@ const fetchCards = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const fetchSeriesList = async () => {
+  try {
+    const response = await fetch('/api/consignments/series');
+    if (response.ok) {
+      const data = await response.json();
+      seriesList.value = data || [];
+    }
+  } catch (error) {
+    console.error('获取系列列表失败:', error);
+  }
+};
+
+const searchCards = () => {
+  currentPage.value = 0;
+  fetchCards();
 };
 
 const changePage = (page) => {
@@ -343,6 +401,7 @@ const deletePack = (pack) => {
 
 onMounted(() => {
   fetchCards();
+  fetchSeriesList();
 });
 </script>
 
@@ -407,6 +466,70 @@ onMounted(() => {
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-bar input {
+  padding: 8px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #475569;
+  background: white;
+  min-width: 200px;
+  transition: all 0.2s ease;
+}
+
+.search-bar input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.btn-search {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-search:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.filter-select {
+  padding: 8px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #475569;
+  background: white;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
 }
 
 .section-header h3 {

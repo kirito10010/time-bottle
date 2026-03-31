@@ -1572,7 +1572,7 @@ const savePerformance = async () => {
     if (response.ok) {
       ElMessage.success(showEditPerformance.value ? '更新成功' : '汇报成功');
       closePerformanceModal();
-      fetchPerformances();
+      await fetchPerformances();
       updateChart();
     } else {
       ElMessage.error(data.message || '操作失败');
@@ -1594,7 +1594,7 @@ const deletePerformance = async (id) => {
     const response = await fetch(`${API_BASE}/daily-performances/${id}`, { method: 'DELETE' });
     if (response.ok) {
       ElMessage.success('删除成功');
-      fetchPerformances();
+      await fetchPerformances();
       updateChart();
     }
   } catch (error) {
@@ -1623,7 +1623,7 @@ const batchDeletePerformances = async () => {
       ElMessage.success('批量删除成功');
       selectedPerformances.value = [];
       selectAllPerformances.value = false;
-      fetchPerformances();
+      await fetchPerformances();
       updateChart();
     }
   } catch (error) {
@@ -1744,7 +1744,7 @@ const saveOvertime = async () => {
     if (response.ok) {
       ElMessage.success(showEditOvertime.value ? '更新成功' : '添加成功');
       closeOvertimeModal();
-      fetchOvertimes();
+      await fetchOvertimes();
       updateChart();
     } else {
       ElMessage.error(data.message || '保存失败');
@@ -1766,7 +1766,7 @@ const deleteOvertime = async (id) => {
     const response = await fetch(`${API_BASE}/overtime-records/${id}`, { method: 'DELETE' });
     if (response.ok) {
       ElMessage.success('删除成功');
-      fetchOvertimes();
+      await fetchOvertimes();
       updateChart();
     }
   } catch (error) {
@@ -1795,7 +1795,7 @@ const batchDeleteOvertimes = async () => {
       ElMessage.success('批量删除成功');
       selectedOvertimes.value = [];
       selectAllOvertimes.value = false;
-      fetchOvertimes();
+      await fetchOvertimes();
       updateChart();
     }
   } catch (error) {

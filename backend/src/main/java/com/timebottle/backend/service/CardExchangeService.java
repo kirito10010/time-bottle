@@ -78,15 +78,33 @@ public class CardExchangeService {
                 map.put("cardImageUrl", card.getImageUrl());
                 map.put("cardType", card.getType());
                 map.put("rarityLevel", card.getRarityLevel());
+                map.put("seriesName", card.getSeriesName());
             }
             return map;
         }).collect(Collectors.toList());
     }
 
-    public List<Map<String, Object>> searchCards(String keyword) {
+    public List<Map<String, Object>> searchCards(String keyword, String series, Integer rarity) {
         List<AnimeCard> cards;
-        if (keyword != null && !keyword.trim().isEmpty()) {
+        
+        boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
+        boolean hasSeries = series != null && !series.trim().isEmpty();
+        boolean hasRarity = rarity != null;
+        
+        if (hasKeyword && hasSeries && hasRarity) {
+            cards = animeCardRepository.findByNameContainingAndSeriesNameAndRarityLevel(keyword, series, rarity);
+        } else if (hasKeyword && hasSeries) {
+            cards = animeCardRepository.findByNameContainingAndSeriesName(keyword, series);
+        } else if (hasKeyword && hasRarity) {
+            cards = animeCardRepository.findByNameContainingAndRarityLevel(keyword, rarity);
+        } else if (hasSeries && hasRarity) {
+            cards = animeCardRepository.findBySeriesNameAndRarityLevel(series, rarity);
+        } else if (hasKeyword) {
             cards = animeCardRepository.findByNameContaining(keyword);
+        } else if (hasSeries) {
+            cards = animeCardRepository.findBySeriesName(series);
+        } else if (hasRarity) {
+            cards = animeCardRepository.findByRarityLevel(rarity);
         } else {
             cards = animeCardRepository.findAll();
         }
@@ -98,8 +116,13 @@ public class CardExchangeService {
             map.put("cardImageUrl", card.getImageUrl());
             map.put("cardType", card.getType());
             map.put("rarityLevel", card.getRarityLevel());
+            map.put("seriesName", card.getSeriesName());
             return map;
         }).collect(Collectors.toList());
+    }
+    
+    public List<String> getAllSeries() {
+        return animeCardRepository.findAllDistinctSeriesNames();
     }
 
     @Transactional

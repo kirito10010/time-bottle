@@ -27,12 +27,26 @@
           <div class="gift-side">
             <div class="side-header">
               <label>选择卡片</label>
-              <div class="search-row">
-                <input 
-                  v-model="searchGiftCardKeyword" 
-                  placeholder="输入卡片名称搜索..."
-                >
-                <button class="btn-search" @click="searchGiftCardKeyword = ''">清除</button>
+              <div class="filter-row">
+                <div class="search-bar">
+                  <input 
+                    v-model="searchGiftCardKeyword" 
+                    placeholder="输入卡片名称搜索..."
+                  >
+                  <button class="btn-search" @click="searchGiftCardKeyword = ''">清除</button>
+                </div>
+                <select v-model="giftSelectedSeries" class="filter-select">
+                  <option value="">全部系列</option>
+                  <option v-for="series in seriesList" :key="series" :value="series">{{ series }}</option>
+                </select>
+                <select v-model="giftSelectedRarity" class="filter-select">
+                  <option value="">全部稀有度</option>
+                  <option value="1">普通</option>
+                  <option value="2">精良</option>
+                  <option value="3">稀有</option>
+                  <option value="4">史诗</option>
+                  <option value="5">传说</option>
+                </select>
               </div>
             </div>
             <div class="card-selector" v-if="filteredGiftCards.length > 0">
@@ -129,12 +143,26 @@
           <div class="exchange-side">
             <div class="side-header">
               <label>选择你要送出的卡片</label>
-              <div class="search-row">
-                <input 
-                  v-model="searchMyCardKeyword" 
-                  placeholder="输入卡片名称搜索..."
-                >
-                <button class="btn-search" @click="searchMyCardKeyword = ''">清除</button>
+              <div class="filter-row">
+                <div class="search-bar">
+                  <input 
+                    v-model="searchMyCardKeyword" 
+                    placeholder="输入卡片名称搜索..."
+                  >
+                  <button class="btn-search" @click="searchMyCardKeyword = ''">清除</button>
+                </div>
+                <select v-model="exchangeMySelectedSeries" class="filter-select">
+                  <option value="">全部系列</option>
+                  <option v-for="series in seriesList" :key="series" :value="series">{{ series }}</option>
+                </select>
+                <select v-model="exchangeMySelectedRarity" class="filter-select">
+                  <option value="">全部稀有度</option>
+                  <option value="1">普通</option>
+                  <option value="2">精良</option>
+                  <option value="3">稀有</option>
+                  <option value="4">史诗</option>
+                  <option value="5">传说</option>
+                </select>
               </div>
             </div>
             <div class="card-selector" v-if="filteredMyCards.length > 0">
@@ -168,13 +196,27 @@
           <div class="exchange-side">
             <div class="side-header">
               <label>选择你想要的卡片</label>
-              <div class="search-row">
-                <input 
-                  v-model="searchCardKeyword" 
-                  placeholder="输入卡片名称搜索..."
-                  @keyup.enter="searchCards"
-                >
-                <button class="btn-search" @click="searchCards">搜索</button>
+              <div class="filter-row">
+                <div class="search-bar">
+                  <input 
+                    v-model="searchCardKeyword" 
+                    placeholder="输入卡片名称搜索..."
+                    @keyup.enter="searchCards"
+                  >
+                  <button class="btn-search" @click="searchCards">搜索</button>
+                </div>
+                <select v-model="exchangeWantSelectedSeries" @change="searchCards" class="filter-select">
+                  <option value="">全部系列</option>
+                  <option v-for="series in seriesList" :key="series" :value="series">{{ series }}</option>
+                </select>
+                <select v-model="exchangeWantSelectedRarity" @change="searchCards" class="filter-select">
+                  <option value="">全部稀有度</option>
+                  <option value="1">普通</option>
+                  <option value="2">精良</option>
+                  <option value="3">稀有</option>
+                  <option value="4">史诗</option>
+                  <option value="5">传说</option>
+                </select>
               </div>
             </div>
             
@@ -335,23 +377,47 @@ const searchMyCardKeyword = ref('');
 const searchGiftCardKeyword = ref('');
 
 const filteredMyCards = computed(() => {
-  if (!searchMyCardKeyword.value.trim()) {
-    return myCards.value;
+  let filtered = [...myCards.value];
+  
+  if (searchMyCardKeyword.value.trim()) {
+    const keyword = searchMyCardKeyword.value.toLowerCase().trim();
+    filtered = filtered.filter(card => 
+      card.cardName.toLowerCase().includes(keyword) ||
+      (card.seriesName && card.seriesName.toLowerCase().includes(keyword))
+    );
   }
-  const keyword = searchMyCardKeyword.value.toLowerCase().trim();
-  return myCards.value.filter(card => 
-    card.cardName.toLowerCase().includes(keyword)
-  );
+  
+  if (exchangeMySelectedSeries.value) {
+    filtered = filtered.filter(card => card.seriesName === exchangeMySelectedSeries.value);
+  }
+  
+  if (exchangeMySelectedRarity.value) {
+    filtered = filtered.filter(card => card.rarityLevel === parseInt(exchangeMySelectedRarity.value));
+  }
+  
+  return filtered;
 });
 
 const filteredGiftCards = computed(() => {
-  if (!searchGiftCardKeyword.value.trim()) {
-    return myCards.value;
+  let filtered = [...myCards.value];
+  
+  if (searchGiftCardKeyword.value.trim()) {
+    const keyword = searchGiftCardKeyword.value.toLowerCase().trim();
+    filtered = filtered.filter(card => 
+      card.cardName.toLowerCase().includes(keyword) ||
+      (card.seriesName && card.seriesName.toLowerCase().includes(keyword))
+    );
   }
-  const keyword = searchGiftCardKeyword.value.toLowerCase().trim();
-  return myCards.value.filter(card => 
-    card.cardName.toLowerCase().includes(keyword)
-  );
+  
+  if (giftSelectedSeries.value) {
+    filtered = filtered.filter(card => card.seriesName === giftSelectedSeries.value);
+  }
+  
+  if (giftSelectedRarity.value) {
+    filtered = filtered.filter(card => card.rarityLevel === parseInt(giftSelectedRarity.value));
+  }
+  
+  return filtered;
 });
 
 const filteredUsers = computed(() => {
@@ -371,12 +437,20 @@ const cardCarousel = ref(null);
 const carouselPosition = ref(0);
 const allUsers = ref([]);
 
+const seriesList = ref([]);
+const giftSelectedSeries = ref('');
+const giftSelectedRarity = ref('');
+const exchangeMySelectedSeries = ref('');
+const exchangeMySelectedRarity = ref('');
+const exchangeWantSelectedSeries = ref('');
+const exchangeWantSelectedRarity = ref('');
+
 const getToken = () => localStorage.getItem('token') || '';
 
 const getAvatarUrl = (avatar) => {
   if (!avatar) return '/default-avatar.svg';
-  if (avatar === 'default-avatar.png') return '/default-avatar.svg';
-  if (avatar.startsWith('http')) return avatar;
+  if (avatar === 'default-avatar.svg' || avatar === 'default-avatar.png') return '/default-avatar.svg';
+  if (avatar.startsWith('http://') || avatar.startsWith('https://')) return avatar;
   return `/Usersimg/${avatar}`;
 };
 
@@ -419,6 +493,16 @@ const fetchMyCards = async () => {
     myCards.value = data.cards || [];
   } catch (error) {
     console.error('获取卡片失败:', error);
+  }
+};
+
+const fetchSeriesList = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/series`);
+    const data = await response.json();
+    seriesList.value = data.series || [];
+  } catch (error) {
+    console.error('获取系列列表失败:', error);
   }
 };
 
@@ -483,6 +567,12 @@ const searchCards = async () => {
     if (searchCardKeyword.value.trim()) {
       params.append('keyword', searchCardKeyword.value.trim());
     }
+    if (exchangeWantSelectedSeries.value) {
+      params.append('series', exchangeWantSelectedSeries.value);
+    }
+    if (exchangeWantSelectedRarity.value) {
+      params.append('rarity', exchangeWantSelectedRarity.value);
+    }
     
     const response = await fetch(`${API_BASE}/search-cards?${params.toString()}`, {
       headers: { 'Authorization': `Bearer ${getToken()}` }
@@ -491,6 +581,10 @@ const searchCards = async () => {
     allCards.value = data.cards || [];
     hasSearchedCards.value = true;
     carouselPosition.value = 0;
+    
+    if (data.seriesList) {
+      seriesList.value = data.seriesList;
+    }
   } catch (error) {
     console.error('搜索卡片失败:', error);
     ElMessage.error('搜索卡片失败');
@@ -696,6 +790,7 @@ const fetchMyExchangeRequests = async () => {
 
 onMounted(() => {
   fetchMyCards();
+  fetchSeriesList();
   fetchAllUsers();
   fetchReceivedGifts();
   fetchPendingExchanges();
@@ -1088,6 +1183,53 @@ onMounted(() => {
 
 .search-row input::placeholder {
   color: #94a3b8;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.filter-row .search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-row .search-bar input {
+  padding: 8px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #475569;
+  background: white;
+  min-width: 140px;
+  transition: all 0.2s ease;
+}
+
+.filter-row .search-bar input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #475569;
+  background: white;
+  cursor: pointer;
+  min-width: 100px;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #667eea;
 }
 
 .btn-search {
