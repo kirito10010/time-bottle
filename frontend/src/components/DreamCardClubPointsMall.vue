@@ -197,6 +197,47 @@
           </div>
         </div>
         
+        <div class="batch-recycle-section">
+          <h4 class="batch-title">⚡ 一键回收</h4>
+          <div class="batch-recycle-form">
+            <div class="batch-row">
+              <div class="batch-field">
+                <label>系列名称</label>
+                <select v-model="batchSeries" class="batch-select">
+                  <option value="">全部系列</option>
+                  <option v-for="series in seriesList" :key="series" :value="series">{{ series }}</option>
+                </select>
+              </div>
+              <div class="batch-field">
+                <label>稀有度</label>
+                <select v-model="batchRarity" class="batch-select">
+                  <option value="">全部稀有度</option>
+                  <option value="1">普通</option>
+                  <option value="2">精良</option>
+                  <option value="3">稀有</option>
+                  <option value="4">史诗</option>
+                  <option value="5">传说</option>
+                </select>
+              </div>
+              <div class="batch-field">
+                <label>每张保留</label>
+                <div class="keep-input">
+                  <button @click="batchKeepCount = Math.max(0, batchKeepCount - 1)">-</button>
+                  <input type="number" v-model.number="batchKeepCount" min="0" max="99">
+                  <button @click="batchKeepCount = Math.min(99, batchKeepCount + 1)">+</button>
+                </div>
+              </div>
+            </div>
+            <div class="batch-preview" v-if="batchPreviewCards.length > 0">
+              <p class="preview-info">将回收 <span class="highlight">{{ batchPreviewCards.length }}</span> 种卡片，共 <span class="highlight">{{ batchTotalQuantity }}</span> 张，获得 <span class="highlight points">{{ batchTotalPoints }}</span> 积分</p>
+            </div>
+            <div class="batch-actions">
+              <button class="btn-preview" @click="previewBatchRecycle" :disabled="batchLoading">预览</button>
+              <button class="btn-batch-recycle" @click="executeBatchRecycle" :disabled="batchLoading || batchPreviewCards.length === 0">一键回收</button>
+            </div>
+          </div>
+        </div>
+        
         <div class="filter-row">
           <div class="search-bar">
             <input type="text" v-model="recycleSearchKeyword" placeholder="搜索卡片名称或系列..." @keyup.enter="searchRecyclableCards">
@@ -409,6 +450,14 @@ const sellQuantity = ref(1);
 const recycleQuantity = ref(1);
 const sellPrice = ref(10);
 const mouseDownOnOverlay = ref(false);
+
+const batchSeries = ref('');
+const batchRarity = ref('');
+const batchKeepCount = ref(1);
+const batchPreviewCards = ref([]);
+const batchTotalQuantity = ref(0);
+const batchTotalPoints = ref(0);
+const batchLoading = ref(false);
 
 const getRarityClass = (rarityLevel) => {
   if (!rarityLevel) return 'common';
@@ -643,6 +692,66 @@ const recycleCard = async () => {
   } catch (error) {
     console.error('回收失败:', error);
     ElMessage.error('网络错误');
+  }
+};
+
+const previewBatchRecycle = () => {
+  const filtered = recyclableCards.value.filter(card => {
+    const matchesSeries = !batchSeries.value || card.seriesName === batchSeries.value;
+    const matchesRarity = !batchRarity.value || card.rarityLevel === parseInt(batchRarity.value);
+    return matchesSeries && matchesRarity;
+  });
+
+  batchPreviewCards.value = filtered.filter(card => card.quantity > batchKeepCount.value);
+  batchTotalQuantity.value = batchPreviewCards.value.reduce((sum, card) => sum + (card.quantity - batchKeepCount.value), 0);
+  batchTotalPoints.value = batchPreviewCards.value.reduce((sum, card) => sum + getRecyclePrice(card.rarityLevel) * (card.quantity - batchKeepCount.value), 0);
+};
+
+const executeBatchRecycle = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    ElMessage.warning('请先登录');
+    return;
+  }
+
+  if (batchPreviewCards.value.length === 0) {
+    ElMessage.warning('没有可回收的卡片');
+    return;
+  }
+
+  batchLoading.value = true;
+  try {
+    const response = await fetch(`${API_BASE}/batch-recycle`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        series: batchSeries.value || null,
+        rarity: batchRarity.value ? parseInt(batchRarity.value) : null,
+        keepCount: batchKeepCount.value
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      ElMessage.success(`一键回收成功！获得 ${data.earnedPoints} 积分`);
+      batchPreviewCards.value = [];
+      batchTotalQuantity.value = 0;
+      batchTotalPoints.value = 0;
+      fetchRecyclableCards();
+      fetchUserPoints();
+      refreshPoints();
+    } else {
+      ElMessage.error(data.message || '回收失败');
+    }
+  } catch (error) {
+    console.error('批量回收失败:', error);
+    ElMessage.error('网络错误');
+  } finally {
+    batchLoading.value = false;
   }
 };
 
@@ -1493,5 +1602,141 @@ onMounted(() => {
 .recycle-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.batch-recycle-section {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid #fbbf24;
+}
+
+.batch-title {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #92400e;
+}
+
+.batch-recycle-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.batch-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.batch-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.batch-field label {
+  font-size: 12px;
+  color: #78350f;
+  font-weight: 500;
+}
+
+.batch-select {
+  padding: 8px 12px;
+  border: 1px solid #fbbf24;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  min-width: 120px;
+}
+
+.keep-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.keep-input input {
+  width: 50px;
+  text-align: center;
+  padding: 8px;
+  border: 1px solid #fbbf24;
+  border-radius: 6px;
+}
+
+.keep-input button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #fbbf24;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.batch-preview {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+}
+
+.preview-info {
+  margin: 0;
+  font-size: 14px;
+  color: #78350f;
+}
+
+.preview-info .highlight {
+  font-weight: 700;
+}
+
+.preview-info .highlight.points {
+  color: #059669;
+  font-size: 16px;
+}
+
+.batch-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-preview {
+  padding: 10px 24px;
+  background: white;
+  color: #92400e;
+  border: 2px solid #fbbf24;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-preview:hover:not(:disabled) {
+  background: #fef3c7;
+}
+
+.btn-batch-recycle {
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-batch-recycle:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.btn-preview:disabled,
+.btn-batch-recycle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

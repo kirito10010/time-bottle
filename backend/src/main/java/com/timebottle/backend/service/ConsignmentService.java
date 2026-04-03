@@ -390,6 +390,56 @@ public class ConsignmentService {
         return totalPoints;
     }
 
+    @Transactional
+    public int batchRecycleCards(@NonNull Integer userId, String series, Integer rarity, Integer keepCount) {
+        List<UserCard> userCards = userCardRepository.findByUid(userId.longValue());
+        int totalPoints = 0;
+
+        for (UserCard uc : userCards) {
+            Optional<AnimeCard> cardOpt = animeCardRepository.findById(uc.getCardId());
+            if (cardOpt.isEmpty()) continue;
+            
+            AnimeCard card = cardOpt.get();
+            
+            boolean matchesSeries = series == null || series.isEmpty() || series.equals(card.getSeriesName());
+            boolean matchesRarity = rarity == null || rarity.equals(card.getRarityLevel());
+            
+            if (!matchesSeries || !matchesRarity) continue;
+            
+            int recycleCount = uc.getQuantity() - keepCount;
+            if (recycleCount <= 0) continue;
+            
+            int pointsPerCard = getRecyclePrice(card.getRarityLevel());
+            totalPoints += pointsPerCard * recycleCount;
+            
+            uc.setQuantity(keepCount);
+            if (keepCount <= 0) {
+                userCardRepository.delete(uc);
+            } else {
+                userCardRepository.save(uc);
+            }
+        }
+
+        if (totalPoints > 0) {
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                user.setPoints(user.getPoints() + totalPoints);
+                user.setUpdatedAt(new Date());
+                userRepository.save(user);
+
+                PointsLog pointsLog = new PointsLog();
+                pointsLog.setUserId(userId);
+                pointsLog.setChange(totalPoints);
+                pointsLog.setType("batch_recycle");
+                pointsLog.setRemark("批量回收卡片");
+                pointsLogRepository.save(pointsLog);
+            }
+        }
+
+        return totalPoints;
+    }
+
     private int getRecyclePrice(Integer rarityLevel) {
         if (rarityLevel == null) return 2;
         switch (rarityLevel) {

@@ -212,6 +212,38 @@ public class ConsignmentController {
         }
     }
 
+    @PostMapping("/batch-recycle")
+    public ResponseEntity<?> batchRecycleCards(
+            @RequestHeader("Authorization") String token,
+            @RequestBody Map<String, Object> request) {
+        Integer userId = extractUserId(token);
+        if (userId == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "请先登录");
+            return ResponseEntity.status(401).body(response);
+        }
+
+        try {
+            String series = (String) request.get("series");
+            Integer rarity = request.get("rarity") != null ? ((Number) request.get("rarity")).intValue() : null;
+            Integer keepCount = request.get("keepCount") != null ? ((Number) request.get("keepCount")).intValue() : 0;
+
+            int earnedPoints = consignmentService.batchRecycleCards(userId, series, rarity, keepCount);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "批量回收成功，获得 " + earnedPoints + " 积分");
+            response.put("earnedPoints", earnedPoints);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
     private Integer extractUserId(String token) {
         if (token == null || token.isEmpty()) return null;
         String cleanToken = token.replace("Bearer ", "");

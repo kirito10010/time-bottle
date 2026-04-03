@@ -10,6 +10,7 @@ import DreamCardClubPointsExam from '../components/DreamCardClubPointsExam.vue';
 import DreamCardClubPointsMall from '../components/DreamCardClubPointsMall.vue';
 import DreamCardClubCardExchange from '../components/DreamCardClubCardExchange.vue';
 import DreamCardClubDrawCard from '../components/DreamCardClubDrawCard.vue';
+import DreamCardClubComingSoon from '../components/DreamCardClubComingSoon.vue';
 import AdminPanelUsers from '../components/AdminPanelUsers.vue';
 import AdminPanelCards from '../components/AdminPanelCards.vue';
 import AdminPanelQuestions from '../components/AdminPanelQuestions.vue';
@@ -80,6 +81,12 @@ const routes = [
     path: '/draw-card',
     name: 'DrawCard',
     component: DreamCardClubDrawCard,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/coming-soon',
+    name: 'ComingSoon',
+    component: DreamCardClubComingSoon,
     meta: { requiresAuth: true }
   },
   {

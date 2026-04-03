@@ -56,6 +56,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/consignments/**").permitAll()
                 .requestMatchers("/api/exam/**").permitAll()
                 .requestMatchers("/api/card-exchange/**").permitAll()
+                .requestMatchers("/api/streak/**").permitAll()
                 .requestMatchers("/Usersimg/**").permitAll()
                 .requestMatchers("/default-avatar.svg", "/default-avatar.png").permitAll()
                 .requestMatchers("/test.html").permitAll()

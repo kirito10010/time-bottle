@@ -23,7 +23,7 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    @Value("${app.upload.avatar-path:./uploads/avatars}")
+    @Value("${app.upload.avatar-path:uploads/avatars}")
     private String avatarPath;
 
     @Value("${app.upload.max-size:2097152}")

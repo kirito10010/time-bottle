@@ -136,6 +136,59 @@ public class CardController {
         }
     }
 
+    @PostMapping("/draw-targeted")
+    public ResponseEntity<?> drawTargetedCard(
+            @RequestHeader("Authorization") String token,
+            @RequestBody Map<String, Object> request) {
+        Long userId = extractUserId(token);
+        if (userId == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "请先登录");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        int count = 1;
+        String seriesName = null;
+        
+        if (request.containsKey("count")) {
+            count = ((Number) request.get("count")).intValue();
+        }
+        if (request.containsKey("seriesName")) {
+            seriesName = (String) request.get("seriesName");
+        }
+        
+        if (seriesName == null || seriesName.isEmpty()) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "请选择系列");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        try {
+            List<AnimeCard> drawnCards = cardService.drawTargetedCards(userId, count, seriesName);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("cards", drawnCards);
+            response.put("count", drawnCards.size());
+            response.put("seriesName", seriesName);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @GetMapping("/series")
+    public ResponseEntity<?> getAllSeries() {
+        List<String> seriesList = cardService.getAllSeriesNames();
+        Map<String, Object> response = new HashMap<>();
+        response.put("series", seriesList);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping
     public ResponseEntity<?> createCard(@RequestBody Map<String, Object> request) {
         try {

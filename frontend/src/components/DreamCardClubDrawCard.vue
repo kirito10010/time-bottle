@@ -2,9 +2,20 @@
   <div class="draw-card-container">
     <div class="header-container">
       <h2>抽取卡片</h2>
-      <div class="points-badge">
-        <span class="points-icon">💎</span>
-        <span class="points-value">{{ userPoints.toLocaleString() }}</span>
+      <div class="header-controls">
+        <select v-model="isTargetedMode" class="draw-mode-select" @change="handleModeChange">
+          <option :value="false">普通抽卡</option>
+          <option :value="true">定向抽卡</option>
+        </select>
+        <select v-model="selectedSeries" class="series-select" :disabled="!isTargetedMode">
+          <option value="">选择系列</option>
+          <option v-for="series in seriesList" :key="series" :value="series">{{ series }}</option>
+        </select>
+        <span v-if="isTargetedMode" class="cost-tip">120%积分</span>
+        <div class="points-badge">
+          <span class="points-icon">💎</span>
+          <span class="points-value">{{ userPoints.toLocaleString() }}</span>
+        </div>
       </div>
     </div>
     
@@ -30,7 +41,7 @@
           <div class="machine-lights">
             <span class="light" v-for="n in 8" :key="n"></span>
           </div>
-          <div class="machine-title">GACHA</div>
+          <div class="machine-title">{{ isTargetedMode ? 'TARGETED' : 'GACHA' }}</div>
         </div>
         
         <div class="machine-body">
@@ -86,24 +97,35 @@
           <div class="draw-controls">
             <button 
               class="draw-btn single" 
-              :disabled="isDrawing || userPoints < 10"
+              :disabled="isDrawing || !canDraw(1)"
               @click="drawCard(1)"
             >
               <span class="btn-icon">🎴</span>
               <span class="btn-content">
                 <span class="btn-title">单抽</span>
-                <span class="btn-cost">10 积分</span>
+                <span class="btn-cost">{{ getDrawCost(1) }} 积分</span>
               </span>
             </button>
             <button 
               class="draw-btn multi" 
-              :disabled="isDrawing || userPoints < 90"
+              :disabled="isDrawing || !canDraw(10)"
               @click="drawCard(10)"
             >
               <span class="btn-icon">🎰</span>
               <span class="btn-content">
                 <span class="btn-title">十连抽</span>
-                <span class="btn-cost">90 积分</span>
+                <span class="btn-cost">{{ getDrawCost(10) }} 积分</span>
+              </span>
+            </button>
+            <button 
+              class="draw-btn mega" 
+              :disabled="isDrawing || !canDraw(50)"
+              @click="drawCard(50)"
+            >
+              <span class="btn-icon">💎</span>
+              <span class="btn-content">
+                <span class="btn-title">五十连抽</span>
+                <span class="btn-cost">{{ getDrawCost(50) }} 积分</span>
               </span>
             </button>
           </div>
@@ -114,7 +136,7 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted } from 'vue';
+import { ref, inject, onMounted, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 
 const refreshPoints = inject('refreshPoints', () => {});
@@ -125,6 +147,30 @@ const isRevealed = ref(false);
 const drawnCards = ref([]);
 const isMultiDraw = ref(false);
 const flippedCards = ref([]);
+const isTargetedMode = ref(false);
+const selectedSeries = ref('');
+const seriesList = ref([]);
+
+const BASE_COSTS = { 1: 10, 10: 90, 50: 450 };
+const TARGETED_MULTIPLIER = 1.2;
+
+const getDrawCost = (count) => {
+  const baseCost = BASE_COSTS[count] || count * 10;
+  return isTargetedMode.value ? Math.ceil(baseCost * TARGETED_MULTIPLIER) : baseCost;
+};
+
+const canDraw = (count) => {
+  const cost = getDrawCost(count);
+  if (userPoints.value < cost) return false;
+  if (isTargetedMode.value && !selectedSeries.value) return false;
+  return true;
+};
+
+const handleModeChange = () => {
+  if (!isTargetedMode.value) {
+    selectedSeries.value = '';
+  }
+};
 
 const getRarityClass = (rarityLevel) => {
   if (!rarityLevel) return 'common';
@@ -183,11 +229,28 @@ const fetchUserPoints = async () => {
   }
 };
 
+const fetchSeriesList = async () => {
+  try {
+    const response = await fetch('/api/cards/series');
+    if (response.ok) {
+      const data = await response.json();
+      seriesList.value = data.series || [];
+    }
+  } catch (error) {
+    console.error('获取系列列表失败:', error);
+  }
+};
+
 const drawCard = async (count) => {
-  const cost = count === 1 ? 10 : 90;
+  const cost = getDrawCost(count);
   
   if (userPoints.value < cost) {
     ElMessage.warning('积分不足');
+    return;
+  }
+  
+  if (isTargetedMode.value && !selectedSeries.value) {
+    ElMessage.warning('请先选择系列');
     return;
   }
   
@@ -203,13 +266,18 @@ const drawCard = async (count) => {
   isMultiDraw.value = count > 1;
   
   try {
-    const response = await fetch('/api/cards/draw', {
+    const url = isTargetedMode.value ? '/api/cards/draw-targeted' : '/api/cards/draw';
+    const body = isTargetedMode.value 
+      ? { count, seriesName: selectedSeries.value }
+      : { count };
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ count })
+      body: JSON.stringify(body)
     });
     
     const data = await response.json();
@@ -223,9 +291,12 @@ const drawCard = async (count) => {
         
         if (count === 1) {
           ElMessage.success(`获得 ${cards[0].name}`);
-        } else {
+        } else if (count === 10) {
           flipCardsSequentially(cards.length);
           ElMessage.success(`十连抽完成！`);
+        } else if (count === 50) {
+          flipCardsSequentially(cards.length);
+          ElMessage.success(`五十连抽完成！`);
         }
         
         refreshPoints();
@@ -243,6 +314,7 @@ const drawCard = async (count) => {
 
 onMounted(() => {
   fetchUserPoints();
+  fetchSeriesList();
 });
 </script>
 
@@ -269,6 +341,44 @@ onMounted(() => {
   font-weight: 600;
   color: #2d3748;
   margin: 0;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.draw-mode-select,
+.header-controls .series-select {
+  padding: 8px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #475569;
+  background: white;
+  cursor: pointer;
+}
+
+.draw-mode-select:focus,
+.header-controls .series-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.header-controls .series-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cost-tip {
+  font-size: 12px;
+  color: #f59e0b;
+  font-weight: 600;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .points-badge {
@@ -691,6 +801,22 @@ onMounted(() => {
   grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   width: 45vw;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 6px;
+  box-sizing: border-box;
+}
+
+.cards-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cards-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cards-grid::-webkit-scrollbar-thumb {
+  background: transparent;
 }
 
 .card-flip-item {
@@ -886,6 +1012,16 @@ onMounted(() => {
   box-shadow: 0 4px 16px rgba(240, 147, 251, 0.35);
 }
 
+.draw-btn.mega {
+  background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.25);
+}
+
+.draw-btn.mega:hover:not(:disabled) {
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.35);
+}
+
 .draw-btn:active:not(:disabled) {
   transform: translateY(0);
 }
@@ -916,20 +1052,6 @@ onMounted(() => {
 .btn-cost {
   font-size: 10px;
   opacity: 0.85;
-}
-
-.btn-discount {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: #ffd700;
-  color: #1a1a2e;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 3px 6px;
-  border-radius: 6px;
-  transform: rotate(15deg);
-  box-shadow: 0 2px 6px rgba(255, 215, 0, 0.5);
 }
 
 @media (max-width: 640px) {
@@ -971,6 +1093,22 @@ onMounted(() => {
   .machine-title {
     font-size: 18px;
     letter-spacing: 4px;
+  }
+  
+  .mode-switch {
+    flex-direction: column;
+    width: 100%;
+    max-width: 200px;
+  }
+  
+  .mode-btn {
+    width: 100%;
+  }
+  
+  .series-selector {
+    flex-direction: column;
+    width: 100%;
+    max-width: 200px;
   }
 }
 </style>

@@ -317,6 +317,7 @@ onUnmounted(() => {
                   <li><router-link to="/points-mall"><span class="menu-icon">🛒</span>积分商城</router-link></li>
                   <li><router-link to="/card-exchange"><span class="menu-icon">🔄</span>卡牌交换</router-link></li>
                   <li><router-link to="/draw-card"><span class="menu-icon">🎰</span>抽取卡片</router-link></li>
+                  <li><router-link to="/coming-soon"><span class="menu-icon">�</span>待开发</router-link></li>
                 </ul>
               </Transition>
             </li>
