@@ -5,7 +5,7 @@
       <div class="action-buttons">
         <div class="filter-item" v-if="hasData">
           <label>考勤项目</label>
-          <el-select v-model="selectedProject" placeholder="全部项目" clearable filterable style="width: 180px;">
+          <el-select v-model="selectedProject" placeholder="全部项目" clearable filterable multiple collapse-tags collapse-tags-tooltip style="width: 220px;">
             <el-option v-for="project in projectList" :key="project" :label="project" :value="project"></el-option>
           </el-select>
         </div>
@@ -178,7 +178,7 @@ import * as XLSX from 'xlsx';
 const uploadRef = ref(null);
 const hasData = ref(false);
 const rawData = ref([]);
-const selectedProject = ref('');
+const selectedProject = ref([]);
 const chart1Sort = ref('desc');
 const chart2Sort = ref('desc');
 const chart3Sort = ref('desc');
@@ -206,8 +206,8 @@ const projectList = computed(() => {
 });
 
 const filteredData = computed(() => {
-  if (!selectedProject.value) return rawData.value;
-  return rawData.value.filter(r => r.project === selectedProject.value);
+  if (!selectedProject.value || selectedProject.value.length === 0) return rawData.value;
+  return rawData.value.filter(r => selectedProject.value.includes(r.project));
 });
 
 const stats = computed(() => {
@@ -228,7 +228,7 @@ const stats = computed(() => {
 });
 
 const filteredTableData = computed(() => {
-  let data = selectedProject.value ? filteredData.value : rawData.value;
+  let data = (selectedProject.value && selectedProject.value.length > 0) ? filteredData.value : rawData.value;
   if (!searchKeyword.value) return data;
   const keyword = searchKeyword.value.toLowerCase();
   return data.filter(r => 

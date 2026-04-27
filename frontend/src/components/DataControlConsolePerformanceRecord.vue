@@ -104,7 +104,7 @@
           </div>
           <div class="filter-item">
             <label>项目</label>
-            <el-select v-model="filterProjectId" placeholder="全部项目" clearable filterable class="filter-select" @change="handleFilterChange">
+            <el-select v-model="filterProjectId" placeholder="全部项目" clearable filterable multiple collapse-tags collapse-tags-tooltip class="filter-select" @change="handleFilterChange">
               <el-option v-for="project in projects" :key="project.id" :label="project.projectName" :value="project.id"></el-option>
             </el-select>
           </div>
@@ -1034,7 +1034,7 @@ const salaryCurrentPage = ref(1);
 const salaryPageSize = 10;
 
 const filterDateRange = ref(null);
-const filterProjectId = ref(null);
+const filterProjectId = ref([]);
 const filterManDays = ref(null);
 const allPerformances = ref([]);
 const allOvertimes = ref([]);
@@ -1436,8 +1436,8 @@ const applyFilters = () => {
     });
   }
   
-  if (filterProjectId.value) {
-    filtered = filtered.filter(p => p.projectId === filterProjectId.value);
+  if (filterProjectId.value && filterProjectId.value.length > 0) {
+    filtered = filtered.filter(p => filterProjectId.value.includes(p.projectId));
   }
   
   if (filterManDays.value) {
@@ -1471,7 +1471,7 @@ const handleFilterChange = () => {
 
 const resetFilters = () => {
   filterDateRange.value = null;
-  filterProjectId.value = null;
+  filterProjectId.value = [];
   filterManDays.value = null;
   applyFilters();
 };
